@@ -47,11 +47,9 @@ def main():
     # Create dummies for these columns
     df = pd.get_dummies(df.copy(), columns=cons.CATEGORIAL, drop_first=True)
 
-    #7. Convert DateTime into DateTime object and sort by DateTime so data is chronological, set DateTime as index and fill missing values:
+    #7. Convert DateTime into DateTime object and sort by DateTime so data is chronological:
     df['DateTime'] = pd.to_datetime(df['DateTime'], errors='coerce')
     df = df.copy().sort_values('DateTime')
-    df.set_index('DateTime', inplace=True)
-    df['DateTime'] = df['DateTime'].ffill().bfill()
 
     #8. Extract hour feature from DateTime column and drop the original DateTime (save it for later)
     df['hour'] = df['DateTime'].dt.hour
