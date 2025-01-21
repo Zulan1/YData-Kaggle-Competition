@@ -69,6 +69,7 @@ def add_engineered_features (df):
     sessions_per_user = df.groupby('user_id')['session_id'].nunique().reset_index()
     sessions_per_user.rename(columns={'session_id': 'sessions_per_user'}, inplace=True)
     df = df.copy().merge(sessions_per_user, on='user_id', how='left')
+    df = df.copy().drop(columns=['session_id'])
 
     return df
 
