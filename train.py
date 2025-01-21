@@ -2,7 +2,7 @@ import argparse
 import constants as cons
 import pandas as pd
 import numpy as np
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, matthews_corrcoef
 from sklearn.dummy import DummyClassifier
 
 import sys
@@ -12,6 +12,24 @@ sys.path.append(os.path.join(os.path.dirname(__file__), './app/'))
 
 from helper_functions import load_training_data, split_dataset_Xy
 
+def compute_score (option, y_true, y_pred) -> float:
+    """Compute the score of the model on the test/validation set.
+    Args:
+        option (str): The metric to use for evaluation.
+        y_pred (np.array): The predicted target values.
+        y_true (np.array): The true target values.
+    Returns:
+        float: The score of the model.
+    """
+    # Calculate the specified metric
+    if option == 'f1':
+        test_score = f1_score(y_true, y_pred, average='weighted')
+    elif option == 'mcc':
+        test_score = matthews_corrcoef(y_true, y_pred)
+    
+    return test_score
+
+
 def main():
     parser = argparse.ArgumentParser()
     # parser.add_argument('--csv-path', default=cons.DATA_PATH, type=str, help='Path to input CSV file')
@@ -20,6 +38,7 @@ def main():
     parser.add_argument('--verbose', type=bool, default=True, help='Print additional information')
     #parser.add_argument('--epochs', type=int, default=10, help='Number of epochs')
     #parser.add_argument('--learning-rate', type=float, default=0.001, help='Learning rate')
+    parser.add_argument('--metric', default='f1', type=str, choices=['f1', 'mcc'], help='Metric to evaluate the model (f1 or mcc)')
     args = parser.parse_args()
 
     #Load processed data:
@@ -51,9 +70,10 @@ def main():
             X_val, y_val = split_dataset_Xy(val_fold)
             y_val_pred = clf.predict(X_val)
 
-            # Calculate F1 score
-            f1 = f1_score(y_val, y_val_pred, average='weighted')
-            fold_scores.append(f1)
+            # Calculate metric score:
+
+            metric_score = compute_score(args.metric, y_val, y_val_pred)
+            fold_scores.append(metric_score)
 
         fold_scores = np.array(fold_scores)
         grid_scores.append(np.mean(fold_scores))  
@@ -79,9 +99,11 @@ def main():
     # Make predictions on the test set
     y_test_pred = best_model.predict(X_test)
 
-    test_f1_score = f1_score(y_test, y_test_pred, average='weighted')
+    test_score = compute_score(args.metric, y_test_pred, y_test)
+
+
     if args.verbose:
-        print(f'Test F1 Score: {test_f1_score}')    
+        print(f'Test {args.metric} Score: {test_score}')    
             
 if __name__ == '__main__':
     main()
