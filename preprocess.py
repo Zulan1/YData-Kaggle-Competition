@@ -13,7 +13,6 @@ import utilities as utils
 from helper_functions import split_dataset_Xy, combine_Xy, save_data_for_training
 
 
-
 def clean_data (df):
     """Clean the data:
     1. Remove duplicates
@@ -55,22 +54,45 @@ def clean_data (df):
     return df
 
 
-def add_engineered_features (df):
-    """Add engineered features to the data:
-    
+def add_cum_ctr (df):
+    """Add cumulative CTR feature to the data:
     Args:
         df (pd.DataFrame): The DataFrame containing the fold data.
-    
     Returns:
         pd.DataFrame: The DataFrame with the added features.
-
     """
-    #Create new features:
+    df['cum_ctr'] = df.groupby('user_id')['is_click'].transform(
+        lambda x: x.expanding().mean().shift(1).fillna(0)
+    )
+    return df
+
+def add_sessions_per_user (df):
+    """Add sessions per user feature to the data:
+    Args:
+        df (pd.DataFrame): The DataFrame containing the fold data.
+    Returns:
+        pd.DataFrame: The DataFrame with the added features.
+    """
     sessions_per_user = df.groupby('user_id')['session_id'].nunique().reset_index()
     sessions_per_user.rename(columns={'session_id': 'sessions_per_user'}, inplace=True)
     df = df.copy().merge(sessions_per_user, on='user_id', how='left')
     df = df.copy().drop(columns=['session_id'])
+    return df
 
+
+def add_engineered_features (df):
+    """Add engineered features to the data by combining multiple feature engineering steps.
+    
+    Args:
+        df (pd.DataFrame): The DataFrame containing the data to engineer features for.
+        
+    Returns:
+        pd.DataFrame: The DataFrame with all engineered features added, including:
+            - Cumulative click-through rate per user
+            - Number of sessions per user
+    """
+    df = add_cum_ctr(df)
+    df = add_sessions_per_user(df)
     return df
 
 
