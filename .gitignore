@@ -1,6 +1,9 @@
 # Virtual environments
 venv/
 .env/
+.venv/
+models/
+wandb/
 
 # Python bytecode
 __pycache__/
