@@ -54,27 +54,6 @@ def clean_data (df):
 
     return df
 
-
-def add_engineered_features (df):
-    """Add engineered features to the data:
-    
-    Args:
-        df (pd.DataFrame): The DataFrame containing the fold data.
-    
-    Returns:
-        pd.DataFrame: The DataFrame with the added features.
-
-    """
-    #Create new features:
-    sessions_per_user = df.groupby('user_id')['session_id'].nunique().reset_index()
-    sessions_per_user.rename(columns={'session_id': 'sessions_per_user'}, inplace=True)
-    df = df.copy().merge(sessions_per_user, on='user_id', how='left')
-    df = df.copy().drop(columns=['session_id'])
-
-    return df
-
-
-
 def main():
     #Parse arguments:
     parser = argparse.ArgumentParser()
@@ -88,18 +67,16 @@ def main():
     full_fn = args.csv_path + '/' + args.filename
     if args.verbose:
         print(f"Processing file: {full_fn}")
-    # Add preprocessing steps here
 
     #1. load csv file
     df = pd.read_csv(full_fn)
 
     #2. Clean the data
     df = clean_data(df)
-      
-    
+       
     if not args.test: 
         #Split the data into training and validation sets, and preprocess each set
-        # Perform stratified split (80/20)
+        # Perform stratified split 
         # Define features and target column
         X, y = split_dataset_Xy(df)
 
@@ -118,30 +95,24 @@ def main():
             X_train_fold, X_val_fold = X_train.iloc[train_idx], X_train.iloc[val_idx]
             y_train_fold, y_val_fold = y_train.iloc[train_idx], y_train.iloc[val_idx]
 
-            # Concatenate X and y fro train and validation each validation fold, and add engineered features
-            # Feature engineering is done at this stage only, to avoid data leakage
-            train_fold = add_engineered_features(combine_Xy(X_train_fold, y_train_fold))
-            val_fold = add_engineered_features(combine_Xy(X_val_fold, y_val_fold))
-            folds.append((train_fold, val_fold))
+            # Concatenate X and y fro train and validation each validation fold
+            train_fold = combine_Xy(X_train_fold, y_train_fold)
+            val_fold = combine_Xy(X_val_fold, y_val_fold)
 
             if args.verbose:
                 print(f"Fold {fold + 1} created with {len(train_fold)} training samples and {len(val_fold)} validation samples.")
 
         # Create DataFrame for the train and test sets, and add engineered features.
         # Here we use againg the train without folds, after optimizing the hyper-parameters we will use the whole set for training
-        train_full = add_engineered_features(combine_Xy(X_train, y_train))
-        test = add_engineered_features(combine_Xy(X_test, y_test))
+        train_full = combine_Xy(X_train, y_train)
+        test = combine_Xy(X_test, y_test)
         if args.verbose:
             print(f"Test set created with {len(test)} samples.")
 
         # Save the folds and test set to CSV files
         save_data_for_training(folds, train_full, test)
 
-    else:
-        # Process the test set (for prediction)
-        # Add engineered features (we assume feature engineering does not require the target column)
-        df = add_engineered_features(df)
-        df.to_csv(args.csv_path + '/' +cons.DEFUALT_PROCESSED_TEST_FILE, index=False)
+
 
 
 
