@@ -28,3 +28,4 @@ def get_preprocessing_args():
     parser.add_argument('--test', type=bool, help='Run on test rather on train dataset')
 
     return parser.parse_args()
+
