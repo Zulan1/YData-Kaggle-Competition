@@ -24,7 +24,7 @@ def get_preprocessing_args():
 
     parser.add_argument('--input-path', default=cons.DEFAULT_RAW_TRAIN_FILE, type=str, help='CSV filename to load')
     parser.add_argument('--out-path', type=str, help='Output directory of all proccessed csv files: train, val, test')
-    parser.add_argument('--verbose', default=False, type=bool, help='Print additional information')
+    parser.add_argument('--verbose', action='store_true', help='Print additional information')
     parser.add_argument('--test', type=bool, help='Run on test rather on train dataset')
 
     return parser.parse_args()
