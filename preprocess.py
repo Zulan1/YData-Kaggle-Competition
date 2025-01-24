@@ -1,6 +1,7 @@
 import argparse
 import pandas as pd
 import constants as cons
+
 from sklearn.model_selection import train_test_split
 
 import sys
@@ -10,7 +11,7 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), './app/'))
 
 import utilities as utils
-from helper_functions import split_dataset_Xy, combine_Xy, save_data_for_training
+from helper_functions import split_dataset_Xy, combine_Xy, save_data_for_training, log
 
 
 
@@ -33,8 +34,7 @@ def clean_data (df):
     df = df.copy().drop_duplicates()
 
     #2. drop columns with high percentage of missing values
-    columns_to_drop = ['product_category_2', 'city_development_index']
-    df = df.copy().drop(columns=columns_to_drop)
+    df = df.copy().drop(columns=cons.COLUMNS_TO_DROP)
 
     #3. Drop missing values
     df = df.copy().dropna()
@@ -45,12 +45,14 @@ def clean_data (df):
 
     #5. Convert DateTime into DateTime object and sort by DateTime so data is chronological:
     df['DateTime'] = pd.to_datetime(df['DateTime'], errors='coerce')
+    if df['DateTime'].isna().sum() > 0:
+        raise ValueError("Invalid DateTime entries found during preprocessing.")
     df = df.copy().sort_values('DateTime')
 
     #6. Extract hour feature and weekday features from DateTime column and drop the original DateTime (save it for later)
     df['hour'] = df['DateTime'].dt.hour
     df['day_of_week'] = df['DateTime'].dt.dayofweek # Monday=0, Tuesday=1, Wednesday=3, Thirsday=4, Friday=5, Saturday = 6
-    df = df.copy().drop(columns=['DateTime'])
+    df = df.copy()
 
     return df
 
@@ -65,8 +67,7 @@ def main():
     args = parser.parse_args()
 
     full_fn = args.csv_path + '/' + args.filename
-    if args.verbose:
-        print(f"Processing file: {full_fn}")
+    log(f"Processing file: {full_fn}", args.verbose)
 
     #1. load csv file
     df = pd.read_csv(full_fn)
@@ -91,17 +92,17 @@ def main():
         val = combine_Xy(X_val, y_val)
         test = combine_Xy(X_test, y_test)
 
-        if args.verbose:
-            print(f"Training set created with {len(train)} samples.")
-            print(f"Validation set created with {len(val)} samples.")
-            print(f"Test set created with {len(test)} samples.")
+        log(f"Training set created with {len(train)} samples.", args.verbose)
+        log(f"Validation set created with {len(val)} samples.", args.verbose)
+        log(f"Test set created with {len(test)} samples.", args.verbose)
 
         # Save the datasets using the helper function
-        save_data_for_training(train, val, test, output_path=args.csv_path)
+        save_data_for_training(train, val, test, path=args.csv_path)
 
     else:
         # Process the test set (for prediction)
-        df.to_csv(args.csv_path + '/' +cons.DEFUALT_PROCESSED_TEST_FILE, index=False)
+        df.to_csv(os.path.join(args.csv_path, cons.DEFAULT_TEST_SET_FILE), index=False)
+        log(f"Test set saved to {cons.DEFAULT_TEST_SET_FILE}.", args.verbose)
 
 if __name__ == '__main__':
     main()

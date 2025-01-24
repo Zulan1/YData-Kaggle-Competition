@@ -8,16 +8,18 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), './../'))
 import constants as cons
 
-def split_dataset_Xy (df : pd.DataFrame) -> (pd.DataFrame, pd.DataFrame):
-    """Split the dataset into features and target:
+def split_dataset_Xy (df : pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Split the dataset into features and target as DataFrames.
+    
     Args:
         df (pd.DataFrame): The DataFrame containing the dataset.
+
     Returns:
-        pd.DataFrame: The DataFrame containing the features.
-        pd.DataFrame: The DataFrame containing the target.
+        Tuple[pd.DataFrame, pd.DataFrame]: The DataFrame containing the features and the DataFrame containing the target.
     """
-    X = df.drop(columns=['is_click'])  # Features
-    y = df['is_click'] # Target
+    X = df.drop(columns=cons.TARGET_COLUMN)  # Drop only the target column(s) for features
+    y = df[cons.TARGET_COLUMN]  # Extract the target as a DataFrame
     return X, y
 
 def combine_Xy (X : pd.DataFrame, y : pd.DataFrame) -> pd.DataFrame:
@@ -31,36 +33,15 @@ def combine_Xy (X : pd.DataFrame, y : pd.DataFrame) -> pd.DataFrame:
     return pd.concat([X, y], axis=1)
 
 
-def save_data_for_training (folds,
-                            train_set,
-                            test_set,
-                            path=cons.DATA_PATH,
-                            train_fold_fn=cons.DEFAULT_TRAIN_FOLD_FILE, 
-                            val_fold_fn=cons.DEFAULT_VAL_FOLD_FILE,
-                            train_set_fn=cons.DEFAULT_TRAIN_SET_FILE,
-                            test_set_fn=cons.DEFAULT_TEST_SET_FILE):
-    """Save the Cross-Validation folds to CSV files:
-    Args:
-        folds (list): A list of tuples containing the training and validation folds (each one is pd.DataFrame).
-        train_set (pd.DataFrame): The training set DataFrame
-        test_set (pd.DataFrame): The test set DataFrame
-        path (str): The path to save the CSV files. Default is 'data/'.
-        train_fold_fn (str): The filename prefix for the training folds. Default is 'train_fold_'.
-        val_fold_nf (str): The filename prefix for the validation folds. Default is 'val_fold_'.
-        train_set_fn (str): The filename for the training set. Default is 'train_set.csv'.    
-        test_set_fn (str): The filename for the test set. Default is 'test_set.csv'.
-
-    Returns:
-        None
-    """
-    for i, (train_fold, val_fold) in enumerate(folds):
-        # Save the training and validation folds
-        train_fold.to_csv(f'{path}/{train_fold_fn}_{i + 1}.csv', index=False)
-        val_fold.to_csv(f'{path}/{val_fold_fn}_{i + 1}.csv', index=False)
-
-    # Save the training and test sets
-    train_set.to_csv(f'{path}/{train_set_fn}', index=False)
-    test_set.to_csv(f'{path}/{test_set_fn}', index=False)
+def save_data_for_training(train, val, test, 
+                           path=cons.DATA_PATH,
+                           train_fn=cons.DEFAULT_TRAIN_SET_FILE,
+                           val_fn=cons.DEFAULT_VAL_SET_FILE,
+                           test_fn=cons.DEFAULT_TEST_SET_FILE):
+    """Save train, validation, and test sets to CSV files."""
+    train.to_csv(f'{path}/{train_fn}', index=False)
+    val.to_csv(f'{path}/{val_fn}', index=False)
+    test.to_csv(f'{path}/{test_fn}', index=False)
 
 def load_training_data(path: str = cons.DATA_PATH, train_fold_fn: str = cons.DEFAULT_TRAIN_FOLD_FILE, val_fold_fn: str = cons.DEFAULT_VAL_FOLD_FILE, train_set_fn: str = cons.DEFAULT_TRAIN_SET_FILE, test_set_fn: str = cons.DEFAULT_TEST_SET_FILE) -> Tuple[list, pd.DataFrame, pd.DataFrame]:
     """Load the Cross-Validation folds and test set from CSV files:
@@ -84,3 +65,7 @@ def load_training_data(path: str = cons.DATA_PATH, train_fold_fn: str = cons.DEF
     test_set = pd.read_csv(f'{path}/{test_set_fn}')
     
     return folds, train_set, test_set
+
+def log(message: str, verbose: bool):
+    if verbose:
+        print(message)
