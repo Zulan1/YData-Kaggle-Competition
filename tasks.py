@@ -8,6 +8,7 @@ def preprocess(ctx):
 @task
 def train(ctx):
     print("Running training step...")
+    ctx.run('python train.py --optuna-search')
     # Add invoke logic for training
 
 @task
