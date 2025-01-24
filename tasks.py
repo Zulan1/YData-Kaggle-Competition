@@ -19,4 +19,4 @@ def predict(ctx):
 @task
 def analyze(ctx):
     print("Running analysis step...")
-    # Add invoke logic for result analysis
+

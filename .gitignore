@@ -51,3 +51,6 @@ archived_experiments/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# VS Code configuration files
+.vscode/
