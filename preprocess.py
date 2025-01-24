@@ -25,28 +25,27 @@ def clean_data (df):
         pd.DataFrame: The cleaned DataFrame.
     """
     #1. Remove duplicates
-    df = df.copy().drop_duplicates()
+    df = df.drop_duplicates()
 
     #2. drop columns with high percentage of missing values
-    df = df.copy().drop(columns=cons.COLUMNS_TO_DROP)
+    df = df.drop(columns=cons.COLUMNS_TO_DROP)
 
     #3. Drop missing values
-    df = df.copy().dropna()
+    df = df.dropna()
 
     #4. Encode categorical values using one-hot encoding (dummies)
     # Create dummies for these columns
-    df = pd.get_dummies(df.copy(), columns=cons.CATEGORIAL, drop_first=True)
+    df = pd.get_dummies(df, columns=cons.CATEGORIAL, drop_first=True)
 
     #5. Convert DateTime into DateTime object and sort by DateTime so data is chronological:
     df['DateTime'] = pd.to_datetime(df['DateTime'], errors='coerce')
     if df['DateTime'].isna().sum() > 0:
         raise ValueError("Invalid DateTime entries found during preprocessing.")
-    df = df.copy().sort_values('DateTime')
+    df = df.sort_values('DateTime')
 
     #6. Extract hour feature and weekday features from DateTime column and drop the original DateTime (save it for later)
     df['hour'] = df['DateTime'].dt.hour
     df['day_of_week'] = df['DateTime'].dt.dayofweek # Monday=0, Tuesday=1, Wednesday=3, Thirsday=4, Friday=5, Saturday = 6
-    df = df.copy()
 
     return df
 
