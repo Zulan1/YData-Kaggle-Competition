@@ -147,7 +147,6 @@ def main():
     X_train, X_val, y_train, y_val = train_test_split(X, y)
     wandb.init(
         project='ydata-kaggle-competition',
-        entity='zulan-ben-gurion-university-of-the-negev',
         config=args,
         )
 
