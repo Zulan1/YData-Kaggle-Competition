@@ -3,7 +3,7 @@ from typing import Tuple
 import constants as cons
 
 
-def split_dataset_Xy (df : pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def split_dataset_Xy(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Split the dataset into features and target as DataFrames.
     
@@ -17,7 +17,7 @@ def split_dataset_Xy (df : pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
     y = df[cons.TARGET_COLUMN]  # Extract the target as a DataFrame
     return X, y
 
-def combine_Xy (X : pd.DataFrame, y : pd.DataFrame) -> pd.DataFrame:
+def combine_Xy(X: pd.DataFrame, y : pd.DataFrame) -> pd.DataFrame:
     """Combine the features and target into a single DataFrame:
     Args:
         X (pd.DataFrame): The DataFrame containing the features.
