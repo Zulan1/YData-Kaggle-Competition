@@ -1,18 +1,12 @@
-import argparse
 import pandas as pd
 import constants as cons
 
 from sklearn.model_selection import train_test_split
 
-import sys
 import os
 
-# Add the 'app/' directory to sys.path
-sys.path.append(os.path.join(os.path.dirname(__file__), './app/'))
-
-import utilities as utils
-from helper_functions import split_dataset_Xy, combine_Xy, save_data_for_training, log
-
+from app.helper_functions import split_dataset_Xy, combine_Xy, save_data_for_training, log
+from app.argparser import get_preprocessing_args
 
 
 def clean_data (df):
@@ -57,16 +51,9 @@ def clean_data (df):
     return df
 
 def main():
-    #Parse arguments:
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--csv-path', default=cons.DATA_PATH, type=str, help='Path to input CSV file')
-    parser.add_argument('--verbose', default=True, type=bool, help='Print additional information')
-    parser.add_argument('--test', default=False, type=bool, help='Run on test rather on train dataset')
-    parser.add_argument('--filename', default=cons.DEFAULT_RAW_TRAIN_FILE, type=str, help='CSV filename to load')
+    args = get_preprocessing_args()
 
-    args = parser.parse_args()
-
-    full_fn = args.csv_path + '/' + args.filename
+    full_fn = args.input_path
     log(f"Processing file: {full_fn}", args.verbose)
 
     #1. load csv file
@@ -97,7 +84,7 @@ def main():
         log(f"Test set created with {len(test)} samples.", args.verbose)
 
         # Save the datasets using the helper function
-        save_data_for_training(train, val, test, path=args.csv_path)
+        save_data_for_training(train, val, test, path=args.out_path)
 
     else:
         # Process the test set (for prediction)
