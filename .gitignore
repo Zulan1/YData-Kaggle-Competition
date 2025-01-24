@@ -1,6 +1,9 @@
 # Virtual environments
 venv/
 .env/
+.venv/
+models/
+wandb/
 
 # Python bytecode
 __pycache__/
@@ -48,3 +51,6 @@ archived_experiments/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# VS Code configuration files
+.vscode/
