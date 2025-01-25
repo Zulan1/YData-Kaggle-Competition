@@ -44,28 +44,6 @@ def clean_data(df):
 
     return df
 
-def encode_data(train, val, test):
-    """One-hot encode categorical features for train, validation, and test sets.
-
-    Args:
-        train (pd.DataFrame): Training set.
-        val (pd.DataFrame): Validation set.
-        test (pd.DataFrame): Test set.
-
-    Returns:
-        Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: Encoded train, validation, and test sets.
-    """
-    # Concatenate all sets to ensure consistent encoding
-    combined = pd.concat([train, val, test])
-    combined = pd.get_dummies(combined, columns=cons.CATEGORIAL, drop_first=True)
-
-    # Split back into train, val, and test
-    train_encoded = combined.iloc[:len(train)]
-    val_encoded = combined.iloc[len(train):len(train) + len(val)]
-    test_encoded = combined.iloc[len(train) + len(val):]
-
-    return train_encoded, val_encoded, test_encoded
-
 def main():
     args = get_preprocessing_args()
 
