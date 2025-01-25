@@ -27,6 +27,29 @@ def combine_Xy(X: pd.DataFrame, y : pd.DataFrame) -> pd.DataFrame:
     """
     return pd.concat([X, y], axis=1)
 
+def encode_data(train: pd.DataFrame, val: pd.DataFrame, test: pd.DataFrame, categorical_columns: list) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """
+    One-hot encode categorical features for train, validation, and test sets.
+    
+    Args:
+        train (pd.DataFrame): Training set.
+        val (pd.DataFrame): Validation set.
+        test (pd.DataFrame): Test set.
+        categorical_columns (list): List of categorical columns to encode.
+
+    Returns:
+        Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: Encoded train, validation, and test sets.
+    """
+    combined = pd.concat([train, val, test])  # Ensure consistent encoding
+    combined = pd.get_dummies(combined, columns=categorical_columns, drop_first=True)
+    
+    # Split back into train, val, and test
+    train_encoded = combined.iloc[:len(train)]
+    val_encoded = combined.iloc[len(train):len(train) + len(val)]
+    test_encoded = combined.iloc[len(train) + len(val):]
+    
+    return train_encoded, val_encoded, test_encoded
+
 
 def save_data_for_training(train, val, test, 
                            path=cons.DATA_PATH,

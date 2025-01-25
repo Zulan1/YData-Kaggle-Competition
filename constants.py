@@ -18,7 +18,7 @@ CATEGORIAL = ['product', 'campaign_id', 'webpage_id', 'product_category_1', 'use
 
 
 #Split and Fold parameters:
-DEFAULT_TEST_SIZE = 0.2
-DEFAULT_N_FOLDS = 5
+RANDOM_STATE = 42
 TRAIN_TEST_SPLIT = 0.4  # Temp = 40% for validation + test
 VAL_TEST_SPLIT = 0.5    # Split Temp equally into validation and test
+
