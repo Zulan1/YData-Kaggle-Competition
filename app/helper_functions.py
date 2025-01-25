@@ -30,6 +30,7 @@ def combine_Xy(X: pd.DataFrame, y : pd.DataFrame) -> pd.DataFrame:
 def encode_data(train: pd.DataFrame, val: pd.DataFrame, test: pd.DataFrame, categorical_columns: list) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     One-hot encode categorical features for train, validation, and test sets.
+    
     Args:
         train (pd.DataFrame): Training set.
         val (pd.DataFrame): Validation set.
