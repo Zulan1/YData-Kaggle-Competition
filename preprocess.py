@@ -62,11 +62,11 @@ def main():
 
         # First split: Train (60%) and Temp (40% for validation + test)
         X_train, X_temp, y_train, y_temp = train_test_split(
-            X, y, test_size=0.4, stratify=y, random_state=42)
+            X, y, test_size=0.4, stratify=y, random_state=cons.RANDOM_STATE)
 
         # Second split: Temp -> Validation (20%) and Test (20%)
         X_val, X_test, y_val, y_test = train_test_split(
-            X_temp, y_temp, test_size=0.5, stratify=y_temp, random_state=42)
+            X_temp, y_temp, test_size=0.5, stratify=y_temp, random_state=cons.RANDOM_STATE)
 
         # Combine X and y back into DataFrames for train, validation, and test
         train = combine_Xy(X_train, y_train)
