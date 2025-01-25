@@ -1,15 +1,14 @@
+import os
 import pandas as pd
 import constants as cons
 
 from sklearn.model_selection import train_test_split
 
-import os
-
 from app.helper_functions import split_dataset_Xy, combine_Xy, save_data_for_training, log
 from app.argparser import get_preprocessing_args
 
 
-def clean_data (df):
+def clean_data(df):
     """Clean the data:
     1. Remove duplicates
     2. Drop columns with high percentage of missing values
@@ -46,6 +45,7 @@ def clean_data (df):
     #6. Extract hour feature and weekday features from DateTime column and drop the original DateTime (save it for later)
     df['hour'] = df['DateTime'].dt.hour
     df['day_of_week'] = df['DateTime'].dt.dayofweek # Monday=0, Tuesday=1, Wednesday=3, Thirsday=4, Friday=5, Saturday = 6
+    df['DateTime'] = df['DateTime'].dt.tz_localize('Europe/London').dt.tz_convert('UTC').astype('int64') // 1e9
 
     return df
 

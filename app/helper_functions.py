@@ -28,11 +28,14 @@ def combine_Xy(X: pd.DataFrame, y : pd.DataFrame) -> pd.DataFrame:
     return pd.concat([X, y], axis=1)
 
 
-def save_data_for_training(train, val, test, 
-                           path=cons.DATA_PATH,
-                           train_fn=cons.DEFAULT_TRAIN_SET_FILE,
-                           val_fn=cons.DEFAULT_VAL_SET_FILE,
-                           test_fn=cons.DEFAULT_TEST_SET_FILE):
+def save_data_for_training(train: pd.DataFrame,
+                           val: pd.DataFrame,
+                           test: pd.DataFrame, 
+                           path: str = cons.DATA_PATH,
+                           train_fn: str = cons.DEFAULT_TRAIN_SET_FILE,
+                           val_fn: str = cons.DEFAULT_VAL_SET_FILE,
+                           test_fn: str = cons.DEFAULT_TEST_SET_FILE
+                           ) -> None:
     """Save train, validation, and test sets to CSV files."""
     train.to_csv(f'{path}/{train_fn}', index=False)
     val.to_csv(f'{path}/{val_fn}', index=False)
@@ -42,7 +45,8 @@ def save_data_for_training(train, val, test,
 def load_training_data(path: str = cons.DATA_PATH, 
                        train_fn: str = cons.DEFAULT_TRAIN_SET_FILE, 
                        val_fn: str = cons.DEFAULT_VAL_SET_FILE, 
-                       test_fn: str = cons.DEFAULT_TEST_SET_FILE) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+                       test_fn: str = cons.DEFAULT_TEST_SET_FILE
+                       ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Load the train, validation, and test sets from CSV files.
 
@@ -63,6 +67,6 @@ def load_training_data(path: str = cons.DATA_PATH,
     return train, val, test
 
 
-def log(message: str, verbose: bool):
+def log(message: str, verbose: bool) -> None:
     if verbose:
         print(message)
