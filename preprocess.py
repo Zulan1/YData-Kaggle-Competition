@@ -5,18 +5,16 @@ from sklearn.model_selection import train_test_split
 
 import os
 
-from app.helper_functions import split_dataset_Xy, combine_Xy, save_data_for_training, log
+from app.helper_functions import split_dataset_Xy, combine_Xy, save_data_for_training, log, encode_data
 from app.argparser import get_preprocessing_args
 
-
-def clean_data (df):
+def clean_data(df):
     """Clean the data:
     1. Remove duplicates
     2. Drop columns with high percentage of missing values
     3. Drop missing values
-    4. Encode categorical values using one-hot encoding (dummies)
-    5. Convert DateTime into DateTime object and sort by DateTime so data is chronological
-    6. Extract hour and weekday features from DateTime column and drop the original DateTime
+    4. Convert DateTime into DateTime object and sort by DateTime so data is chronological
+    5. Extract hour and weekday features from DateTime column
 
     Args:
         df (pd.DataFrame): The DataFrame containing the fold data.
@@ -27,27 +25,46 @@ def clean_data (df):
     #1. Remove duplicates
     df = df.drop_duplicates()
 
-    #2. drop columns with high percentage of missing values
+    #2. Drop columns with high percentage of missing values
     df = df.drop(columns=cons.COLUMNS_TO_DROP)
 
     #3. Drop missing values
     df = df.dropna()
 
-    #4. Encode categorical values using one-hot encoding (dummies)
-    # Create dummies for these columns
-    df = pd.get_dummies(df, columns=cons.CATEGORIAL, drop_first=True)
-
-    #5. Convert DateTime into DateTime object and sort by DateTime so data is chronological:
+    #4. Convert DateTime into DateTime object and sort by DateTime so data is chronological:
     df['DateTime'] = pd.to_datetime(df['DateTime'], errors='coerce')
     if df['DateTime'].isna().sum() > 0:
         raise ValueError("Invalid DateTime entries found during preprocessing.")
     df = df.sort_values('DateTime')
 
-    #6. Extract hour feature and weekday features from DateTime column and drop the original DateTime (save it for later)
+    #5. Extract hour and weekday features from DateTime column and drop the original DateTime
     df['hour'] = df['DateTime'].dt.hour
-    df['day_of_week'] = df['DateTime'].dt.dayofweek # Monday=0, Tuesday=1, Wednesday=3, Thirsday=4, Friday=5, Saturday = 6
+    df['day_of_week'] = df['DateTime'].dt.dayofweek # Monday=0, Tuesday=1, Wednesday=2, Thursday=3, Friday=4, Saturday=5, Sunday=6
+    df = df.drop(columns=['DateTime'])
 
     return df
+
+def encode_data(train, val, test):
+    """One-hot encode categorical features for train, validation, and test sets.
+
+    Args:
+        train (pd.DataFrame): Training set.
+        val (pd.DataFrame): Validation set.
+        test (pd.DataFrame): Test set.
+
+    Returns:
+        Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: Encoded train, validation, and test sets.
+    """
+    # Concatenate all sets to ensure consistent encoding
+    combined = pd.concat([train, val, test])
+    combined = pd.get_dummies(combined, columns=cons.CATEGORIAL, drop_first=True)
+
+    # Split back into train, val, and test
+    train_encoded = combined.iloc[:len(train)]
+    val_encoded = combined.iloc[len(train):len(train) + len(val)]
+    test_encoded = combined.iloc[len(train) + len(val):]
+
+    return train_encoded, val_encoded, test_encoded
 
 def main():
     args = get_preprocessing_args()
@@ -55,7 +72,7 @@ def main():
     full_fn = args.input_path
     log(f"Processing file: {full_fn}", args.verbose)
 
-    #1. load csv file
+    #1. Load csv file
     df = pd.read_csv(full_fn)
 
     #2. Clean the data
@@ -78,12 +95,16 @@ def main():
         val = combine_Xy(X_val, y_val)
         test = combine_Xy(X_test, y_test)
 
-        log(f"Training set created with {len(train)} samples.", args.verbose)
-        log(f"Validation set created with {len(val)} samples.", args.verbose)
-        log(f"Test set created with {len(test)} samples.", args.verbose)
+        # Encode categorical features after splitting to avoid data leakage
+        train_encoded, val_encoded, test_encoded = encode_data(
+            train, val, test, categorical_columns=cons.CATEGORIAL)
+
+        log(f"Training set created with {len(train_encoded)} samples.", args.verbose)
+        log(f"Validation set created with {len(val_encoded)} samples.", args.verbose)
+        log(f"Test set created with {len(test_encoded)} samples.", args.verbose)
 
         # Save the datasets using the helper function
-        save_data_for_training(train, val, test, path=args.out_path)
+        save_data_for_training(train_encoded, val_encoded, test_encoded, path=args.out_path)
 
     else:
         # Process the test set (for prediction)
