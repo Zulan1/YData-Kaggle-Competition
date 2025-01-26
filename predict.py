@@ -7,7 +7,6 @@ def main():
     print(f"Loading model from {args.model_path}")
     print(f"Predicting on data from {args.input_data}")
     # Add prediction logic here
-    model = 
 
 
 if __name__ == '__main__':

@@ -88,11 +88,13 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
         wandb.log({f'best {args.scoring_method}': best_score})
 
     def objective(trial):
-        model_type = trial.suggest_categorical('model_type', ['LogisticRegression', 'RandomForest', 'XGBoost'])
+        model_types = ['LogisticRegression', 'RandomForest', 'XGBoost'] if args.model_type is None else [args.model_type]
+        model_type = trial.suggest_categorical('model_type', model_types)
         match model_type:
             case 'LogisticRegression':
                 hparams = {
-                    'C': trial.suggest_float('C', 1e-10, 1e10, log=True)
+                    'C': trial.suggest_float('C', 1e-10, 1e10, log=True),
+                    'class_weight': trial.suggest_categorical('class_weight', ['balanced', None])
                 }
                 model = LogisticRegression()
             case 'RandomForest':
@@ -128,7 +130,7 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
                     'subsample': trial.suggest_float('subsample', 0.5, 1.0),
                     'colsample_bytree': trial.suggest_float('colsample_bytree', 0.5, 1.0),
                     'reg_alpha': trial.suggest_float('reg_alpha', 0, 2),
-                    'reg_lambda': trial.suggest_float('reg_lambda', 0, 2)
+                    'reg_lambda': trial.suggest_float('reg_lambda', 0, 2),
                 }
                 model = lgb.LGBMClassifier()
             case _:
@@ -159,10 +161,9 @@ def main():
 
     # X_train.drop(columns=['DateTime', 'user_id', 'session_id'], inplace=True)
     # X_val.drop(columns=['DateTime', 'user_id', 'session_id'], inplace=True)\
-    print(f'columns: {X_train.columns}\nsel columns: {selected_columns}')
     # X_train = X_train[selected_columns]
     # X_val = X_val[selected_columns]
-    X_train, y_train = SMOTE().fit_resample(X_train, y_train)
+    # X_train, y_train = SMOTE().fit_resample(X_train, y_train)
     
 
     dmy_cls = DummyClassifier(strategy='most_frequent')
@@ -178,6 +179,10 @@ def main():
         )
 
     model = get_model(args, X_train, y_train, X_val, y_val)
+    model.fit(X_train, y_train)
+    score = compute_score(args.scoring_method, y_val, model.predict(X_val))
+    wandb.log({args.scoring_method: score})
+    print(f"Final score: {score}")
     
     os.makedirs('models', exist_ok=True)
     timestamp = time.time()
