@@ -17,7 +17,7 @@ def log(message: str, verbose: bool, level="INFO"):
     if verbose:
         print(f"{datetime.now().isoformat()} [{level}] {message}")    
 
-
+'''
 def clean_data(df):
     #1. Remove duplicates
     df = df.drop_duplicates()
@@ -42,7 +42,44 @@ def clean_data(df):
     df = df.drop(columns=["hour"]) 
     
     return df
+'''
 
+
+def remove_duplicates(df: pd.DataFrame) -> pd.DataFrame:
+    """Remove duplicate rows from the DataFrame."""
+    return df.drop_duplicates()
+
+def drop_high_missing_columns(df: pd.DataFrame, columns_to_drop: list) -> pd.DataFrame:
+    """Drop columns with a high percentage of missing values."""
+    return df.drop(columns=columns_to_drop, errors="ignore")
+
+def drop_missing_values(df: pd.DataFrame) -> pd.DataFrame:
+    """Drop all rows with missing values."""
+    return df.dropna()
+
+def process_datetime(df: pd.DataFrame, datetime_column: str) -> pd.DataFrame:
+    """Convert DateTime column to a proper datetime object and validate entries."""
+    df[datetime_column] = pd.to_datetime(df[datetime_column], errors="coerce")
+    if df[datetime_column].isna().any():
+        raise ValueError("Invalid DateTime entries found during preprocessing.")
+    return df
+
+def extract_time_features(df: pd.DataFrame, datetime_column: str) -> pd.DataFrame:
+    """Extract hour, hour_sin, hour_cos, and day_of_week from the DateTime column."""
+    df['hour'] = df[datetime_column].dt.hour
+    df['hour_sin'] = np.sin(2 * np.pi * df['hour'] / 24)
+    df['hour_cos'] = np.cos(2 * np.pi * df['hour'] / 24)
+    df['day_of_week'] = df[datetime_column].dt.dayofweek
+    return df.drop(columns=['hour'])
+
+def clean_data(df: pd.DataFrame, columns_to_drop: list, datetime_column: str) -> pd.DataFrame:
+    """Pipeline to clean the data by calling modular functions."""
+    df = remove_duplicates(df)
+    df = drop_high_missing_columns(df, columns_to_drop)
+    df = drop_missing_values(df)
+    df = process_datetime(df, datetime_column)
+    df = extract_time_features(df, datetime_column)
+    return df
         
 def split_dataset_Xy(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """

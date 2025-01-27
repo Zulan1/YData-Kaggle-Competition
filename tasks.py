@@ -1,7 +1,7 @@
 from invoke import task
 @task
 def preprocess(c):
-    print("Running preprocess step...")
+    print("Running raw data preprocess step...")
     c.run("python preprocess.py --input-path=./data/train_dataset_full.csv --out-path=./data/ --verbose")
           
 @task

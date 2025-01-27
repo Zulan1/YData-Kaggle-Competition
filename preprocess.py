@@ -21,7 +21,7 @@ def main():
     log(f"Processing file: {full_fn}", args.verbose)
     
     #2. Clean the data
-    df = clean_data(df)
+    df = clean_data(df, columns_to_drop=cons.COLUMNS_TO_DROP, datetime_column=cons.DATETIME_COLUMN)
       
     if not args.test: 
         # 3. Split the data into features (X) and target (y)
