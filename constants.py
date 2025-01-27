@@ -14,7 +14,7 @@ TARGET_COLUMN = 'is_click'
 
 #Column names groups:
 DEMOGRAPHICS = ['gender', 'age_level', 'city_development_index', 'user_group_id']
-CATEGORIAL = ['product', 'campaign_id', 'webpage_id', 'product_category_1', 'user_group_id', 'gender', 'var_1']
+CATEGORIAL = ['day_of_week', 'product', 'campaign_id', 'webpage_id', 'product_category_1', 'user_group_id', 'gender', 'var_1']
 
 
 #Split and Fold parameters:
