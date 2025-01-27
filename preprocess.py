@@ -1,95 +1,79 @@
 import pandas as pd
 import constants as cons
+import os
 
 from sklearn.model_selection import train_test_split
 
-import os
-
-from app.helper_functions import split_dataset_Xy, combine_Xy, save_data_for_training, log, encode_data
+from app.helper_functions import align_columns, clean_data, split_dataset_Xy, combine_Xy, save_data_for_training, log, encode_data
 from app.argparser import get_preprocessing_args
-
-def clean_data(df):
-    """Clean the data:
-    1. Remove duplicates
-    2. Drop columns with high percentage of missing values
-    3. Drop missing values
-    4. Convert DateTime into DateTime object and sort by DateTime so data is chronological
-    5. Extract hour and weekday features from DateTime column
-
-    Args:
-        df (pd.DataFrame): The DataFrame containing the fold data.
-    
-    Returns:
-        pd.DataFrame: The cleaned DataFrame.
-    """
-    #1. Remove duplicates
-    df = df.drop_duplicates()
-
-    #2. Drop columns with high percentage of missing values
-    df = df.drop(columns=cons.COLUMNS_TO_DROP)
-
-    #3. Drop missing values
-    df = df.dropna()
-
-    #4. Convert DateTime into DateTime object and sort by DateTime so data is chronological:
-    df['DateTime'] = pd.to_datetime(df['DateTime'], errors='coerce')
-    if df['DateTime'].isna().sum() > 0:
-        raise ValueError("Invalid DateTime entries found during preprocessing.")
-    df = df.sort_values('DateTime')
-
-    #5. Extract hour and weekday features from DateTime column and drop the original DateTime
-    df['hour'] = df['DateTime'].dt.hour
-    df['hour_sin'] = np.sin(2 * np.pi * df['hour'] / 24)
-    df['hour_cos'] = np.cos(2 * np.pi * df['hour'] / 24)
-    df['day_of_week'] = df['DateTime'].dt.dayofweek # Monday=0, Tuesday=1, Wednesday=2, Thursday=3, Friday=4, Saturday=5, Sunday=6
-    df = df.drop(columns=['DateTime'])
-
-    return df
 
 def main():
     args = get_preprocessing_args()
 
+    # 1. Validate and load CSV file
     full_fn = args.input_path
-    log(f"Processing file: {full_fn}", args.verbose)
-
-    #1. Load csv file
+    if not os.path.exists(full_fn):
+        raise FileNotFoundError(f"Input file '{full_fn}' does not exist.")
+    
     df = pd.read_csv(full_fn)
-
+    if df.empty:
+        raise ValueError("Input dataset is empty.")
+    log(f"Processing file: {full_fn}", args.verbose)
+    
     #2. Clean the data
     df = clean_data(df)
       
     if not args.test: 
-        # Split the data into features (X) and target (y)
+        # 3. Split the data into features (X) and target (y)
         X, y = split_dataset_Xy(df)
 
-        # First split: Train (60%) and Temp (40% for validation + test)
+        # First split: Train and Temp (for validation + test)
         X_train, X_temp, y_train, y_temp = train_test_split(
-            X, y, test_size=0.4, stratify=y, random_state=cons.RANDOM_STATE)
+            X, y, test_size=cons.TRAIN_TEST_SPLIT, stratify=y, random_state=cons.RANDOM_STATE)
 
-        # Second split: Temp -> Validation (20%) and Test (20%)
+        # Second split: Temp -> Validation and Test
         X_val, X_test, y_val, y_test = train_test_split(
-            X_temp, y_temp, test_size=0.5, stratify=y_temp, random_state=cons.RANDOM_STATE)
+            X_temp, y_temp, test_size=cons.VAL_TEST_SPLIT, stratify=y_temp, random_state=cons.RANDOM_STATE)
 
         # Combine X and y back into DataFrames for train, validation, and test
         train = combine_Xy(X_train, y_train)
         val = combine_Xy(X_val, y_val)
         test = combine_Xy(X_test, y_test)
 
-        # Encode categorical features after splitting to avoid data leakage
+        # 4. Encode categorical features after splitting to avoid data leakage
         train_encoded, val_encoded, test_encoded = encode_data(
             train, val, test, categorical_columns=cons.CATEGORIAL)
+        
+        # 5. Column Alignment
+        all_columns = set(train_encoded.columns).union(val_encoded.columns).union(test_encoded.columns)
+        train_encoded = align_columns(train_encoded, all_columns)
+        val_encoded = align_columns(val_encoded, all_columns)
+        test_encoded = align_columns(test_encoded, all_columns)
+
+        # 6. Multi-Level Index for Traceability
+        try:
+            train_encoded.set_index(cons.INDEX_COLUMNS, inplace=True, drop=True)
+            val_encoded.set_index(cons.INDEX_COLUMNS, inplace=True, drop=True)
+            test_encoded.set_index(cons.INDEX_COLUMNS, inplace=True, drop=True)
+        except KeyError as e:
+            raise KeyError(f"Ensure all index columns {cons.INDEX_COLUMNS} exist in the dataset. Missing columns: {e}")
+
+        # 7. Align Indices of y Sets to Match X Sets
+        y_train = pd.Series(y_train.values, index=train_encoded.index, name=cons.TARGET_COLUMN)
+        y_val = pd.Series(y_val.values, index=val_encoded.index, name=cons.TARGET_COLUMN)
+        y_test = pd.Series(y_test.values, index=test_encoded.index, name=cons.TARGET_COLUMN)
 
         log(f"Training set created with {len(train_encoded)} samples.", args.verbose)
         log(f"Validation set created with {len(val_encoded)} samples.", args.verbose)
         log(f"Test set created with {len(test_encoded)} samples.", args.verbose)
 
-        # Save the datasets using the helper function
+        # 8. Save the datasets using the helper function
         save_data_for_training(train_encoded, val_encoded, test_encoded, path=args.out_path)
 
     else:
-        # Process the test set (for prediction)
-        df.to_csv(os.path.join(args.csv_path, cons.DEFAULT_TEST_SET_FILE), index=False)
-        log(f"Test set saved to {cons.DEFAULT_TEST_SET_FILE}.", args.verbose)
+        # 9. Process the external test set (for prediction)
+        df.to_csv(os.path.join(args.csv_path, cons.DEFAULT_EXTERNAL_RAW_TEST_FILE), index=False)
+        log(f"Test set saved to {cons.DEFAULT_EXTERNAL_RAW_TEST_FILE}.", args.verbose)
 
 if __name__ == '__main__':
     main()
