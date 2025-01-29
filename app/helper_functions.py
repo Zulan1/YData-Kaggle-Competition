@@ -1,8 +1,86 @@
+import os
+import numpy as np
 import pandas as pd
+from datetime import datetime
 from typing import Tuple
 import constants as cons
 
+def log(message: str, verbose: bool, level="INFO"):
+    """
+    Logs a message with an optional timestamp and log level.
+    
+    Args:
+        message (str): The log message.
+        verbose (bool): If True, prints the log.
+        level (str): The log level (e.g., INFO, ERROR). Default is "INFO".
+    """
+    if verbose:
+        print(f"{datetime.now().isoformat()} [{level}] {message}")    
 
+'''
+def clean_data(df):
+    #1. Remove duplicates
+    df = df.drop_duplicates()
+    #2. Drop columns with high percentage of missing values
+    df = df.drop(columns=cons.COLUMNS_TO_DROP)
+    #3. Drop all rows with missing values
+    df = df.dropna()
+
+    #4. Convert DateTime into DateTime object and sort by DateTime so data is chronological:
+    df[cons.DATETIME_COLUMN] = pd.to_datetime(df[cons.DATETIME_COLUMN], errors='coerce')
+    if df[cons.DATETIME_COLUMN].isna().any():
+        raise ValueError("Invalid DateTime entries found during preprocessing.")
+    #df = df.sort_values('DateTime')
+
+    #5. Extract hour and weekday features from DateTime column and drop the original DateTime
+    df['hour'] = df[cons.DATETIME_COLUMN].dt.hour
+    df['hour_sin'] = np.sin(2 * np.pi * df['hour'] / 24)
+    df['hour_cos'] = np.cos(2 * np.pi * df['hour'] / 24)
+    df['day_of_week'] = df[cons.DATETIME_COLUMN].dt.dayofweek # Monday=0, Tuesday=1, Wednesday=2, Thursday=3, Friday=4, Saturday=5, Sunday=6
+    
+    # Drop raw hour column - create instead function for feature selection
+    df = df.drop(columns=["hour"]) 
+    
+    return df
+'''
+
+
+def remove_duplicates(df: pd.DataFrame) -> pd.DataFrame:
+    """Remove duplicate rows from the DataFrame."""
+    return df.drop_duplicates()
+
+def drop_high_missing_columns(df: pd.DataFrame, columns_to_drop: list) -> pd.DataFrame:
+    """Drop columns with a high percentage of missing values."""
+    return df.drop(columns=columns_to_drop, errors="ignore")
+
+def drop_missing_values(df: pd.DataFrame) -> pd.DataFrame:
+    """Drop all rows with missing values."""
+    return df.dropna()
+
+def process_datetime(df: pd.DataFrame, datetime_column: str) -> pd.DataFrame:
+    """Convert DateTime column to a proper datetime object and validate entries."""
+    df[datetime_column] = pd.to_datetime(df[datetime_column], errors="coerce")
+    if df[datetime_column].isna().any():
+        raise ValueError("Invalid DateTime entries found during preprocessing.")
+    return df
+
+def extract_time_features(df: pd.DataFrame, datetime_column: str) -> pd.DataFrame:
+    """Extract hour, hour_sin, hour_cos, and day_of_week from the DateTime column."""
+    df['hour'] = df[datetime_column].dt.hour
+    df['hour_sin'] = np.sin(2 * np.pi * df['hour'] / 24)
+    df['hour_cos'] = np.cos(2 * np.pi * df['hour'] / 24)
+    df['day_of_week'] = df[datetime_column].dt.dayofweek
+    return df.drop(columns=['hour'])
+
+def clean_data(df: pd.DataFrame, columns_to_drop: list, datetime_column: str) -> pd.DataFrame:
+    """Pipeline to clean the data by calling modular functions."""
+    df = remove_duplicates(df)
+    df = drop_high_missing_columns(df, columns_to_drop)
+    df = drop_missing_values(df)
+    df = process_datetime(df, datetime_column)
+    df = extract_time_features(df, datetime_column)
+    return df
+        
 def split_dataset_Xy(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Split the dataset into features and target as DataFrames.
@@ -15,6 +93,7 @@ def split_dataset_Xy(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     X = df.drop(columns=cons.TARGET_COLUMN)  # Drop only the target column(s) for features
     y = df[cons.TARGET_COLUMN]  # Extract the target as a DataFrame
+    X, y = X.align(y, axis=0)  # Align indices of X and y
     return X, y
 
 def combine_Xy(X: pd.DataFrame, y : pd.DataFrame) -> pd.DataFrame:
@@ -28,18 +107,55 @@ def combine_Xy(X: pd.DataFrame, y : pd.DataFrame) -> pd.DataFrame:
     return pd.concat([X, y], axis=1)
 
 
-def save_data_for_training(train: pd.DataFrame,
-                           val: pd.DataFrame,
-                           test: pd.DataFrame, 
-                           path: str = cons.DATA_PATH,
-                           train_fn: str = cons.DEFAULT_TRAIN_SET_FILE,
-                           val_fn: str = cons.DEFAULT_VAL_SET_FILE,
-                           test_fn: str = cons.DEFAULT_TEST_SET_FILE
-                           ) -> None:
+def align_columns(df, all_columns):
+    """
+    Aligns a DataFrame's columns with the union of columns from all splits.
+    
+    Args:
+        df (pd.DataFrame): The DataFrame to align.
+        all_columns (set): The union of all columns from train, val, and test.
+    
+    Returns:
+        pd.DataFrame: The aligned DataFrame.
+    """
+    # Add missing columns and fill with 0
+    missing_cols = all_columns - set(df.columns)
+    for col in missing_cols:
+        df[col] = 0
+
+    # Ensure the column order matches
+    return df[list(all_columns)]
+
+def encode_data(train: pd.DataFrame, val: pd.DataFrame, test: pd.DataFrame, categorical_columns: list) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """
+    One-hot encode categorical features for train, validation, and test sets.
+    
+    Args:
+        train (pd.DataFrame): Training set.
+        val (pd.DataFrame): Validation set.
+        test (pd.DataFrame): Test set.
+        categorical_columns (list): List of categorical columns to encode.
+
+    Returns:
+        Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: Encoded train, validation, and test sets.
+    """
+    combined = pd.concat([train, val, test])  # Ensure consistent encoding
+    combined = pd.get_dummies(combined, columns=categorical_columns, drop_first=True)
+    
+    # Split back into train, val, and test and Ensure consistent column alignment
+    train_encoded = combined.iloc[:len(train)].reindex(columns=combined.columns)
+    val_encoded =   combined.iloc[len(train):len(train) + len(val)].reindex(columns=combined.columns)
+    test_encoded =  combined.iloc[len(train) + len(val):].reindex(columns=combined.columns)
+    
+    return train_encoded, val_encoded, test_encoded
+
+
+def save_data_for_training(train, val, test, path=cons.DATA_PATH):
     """Save train, validation, and test sets to CSV files."""
-    train.to_csv(f'{path}/{train_fn}', index=False)
-    val.to_csv(f'{path}/{val_fn}', index=False)
-    test.to_csv(f'{path}/{test_fn}', index=False)
+    os.makedirs(path, exist_ok=True)
+    train.to_csv(f'{path}/{cons.DEFAULT_TRAIN_SET_FILE}', index=False)
+    val.to_csv(f'{path}/{cons.DEFAULT_VAL_SET_FILE}', index=False)
+    test.to_csv(f'{path}/{cons.DEFAULT_TEST_SET_FILE}', index=False)
 
 
 def load_training_data(path: str = cons.DATA_PATH, 
@@ -60,10 +176,9 @@ def load_training_data(path: str = cons.DATA_PATH,
         Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: The training, validation, and test sets as DataFrames.
     """
     # Load train, validation, and test sets
-    train = pd.read_csv(f'{path}/{train_fn}')
-    val = pd.read_csv(f'{path}/{val_fn}')
-    test = pd.read_csv(f'{path}/{test_fn}')
-    
+    train = pd.read_csv(f'{path}/{cons.DEFAULT_TRAIN_SET_FILE}')
+    val = pd.read_csv(f'{path}/{cons.DEFAULT_VAL_SET_FILE}')
+    test = pd.read_csv(f'{path}/{cons.DEFAULT_TEST_SET_FILE}') 
     return train, val, test
 
 
