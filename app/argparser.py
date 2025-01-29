@@ -26,3 +26,9 @@ def get_preprocessing_args():
     parser.add_argument('--test', type=bool, help='Preprocess external test set only')
     return parser.parse_args()
 
+
+def get_predict_args():
+    parser = argparse.ArgumentParser(description='Predict on new data')
+    parser.add_argument('--model-path', type=str, required=True, help='Path to the trained model')
+    parser.add_argument('--input-data', type=str, required=True, help='Path to input data for prediction')
+    return parser.parse_args()

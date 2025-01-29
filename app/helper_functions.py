@@ -158,7 +158,11 @@ def save_data_for_training(train, val, test, path=cons.DATA_PATH):
     test.to_csv(f'{path}/{cons.DEFAULT_TEST_SET_FILE}', index=False)
 
 
-def load_training_data(path: str = cons.DATA_PATH) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def load_training_data(path: str = cons.DATA_PATH, 
+                       train_fn: str = cons.DEFAULT_TRAIN_SET_FILE, 
+                       val_fn: str = cons.DEFAULT_VAL_SET_FILE, 
+                       test_fn: str = cons.DEFAULT_TEST_SET_FILE
+                       ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Load the train, validation, and test sets from CSV files.
 
@@ -176,3 +180,8 @@ def load_training_data(path: str = cons.DATA_PATH) -> Tuple[pd.DataFrame, pd.Dat
     val = pd.read_csv(f'{path}/{cons.DEFAULT_VAL_SET_FILE}')
     test = pd.read_csv(f'{path}/{cons.DEFAULT_TEST_SET_FILE}') 
     return train, val, test
+
+
+def log(message: str, verbose: bool) -> None:
+    if verbose:
+        print(message)

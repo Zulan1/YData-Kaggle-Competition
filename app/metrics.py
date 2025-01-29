@@ -1,4 +1,4 @@
-from sklearn.metrics import f1_score, matthews_corrcoef
+from sklearn.metrics import f1_score, matthews_corrcoef, balanced_accuracy_score
 
 def compute_score(option, y_true, y_pred) -> float:
     """Compute the score of the model on the test/validation set.
@@ -14,5 +14,9 @@ def compute_score(option, y_true, y_pred) -> float:
         test_score = f1_score(y_true, y_pred, average='weighted')
     elif option == 'mcc':
         test_score = matthews_corrcoef(y_true, y_pred)
+    elif option == 'bacc':
+        test_score = balanced_accuracy_score(y_true, y_pred)
+    elif option == 'aba':
+        test_score = balanced_accuracy_score(y_true, y_pred, adjusted=True)
     
     return test_score
