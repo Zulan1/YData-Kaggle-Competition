@@ -12,6 +12,7 @@ def train(c):
 @task
 def predict(c):
     print("Running prediction step...")
+    c.run('python predict.py --input-path data/test_dataset.csv --out-path data/')
     # Add invoke logic for prediction
 @task
 def analyze(c):
