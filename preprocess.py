@@ -7,6 +7,12 @@ from sklearn.model_selection import train_test_split
 from app.helper_functions import align_columns, clean_data, split_dataset_Xy, combine_Xy, save_data_for_training, log, encode_data
 from app.argparser import get_preprocessing_args
 from sklearn.preprocessing import OneHotEncoder
+from sklearn.impute import SimpleImputer
+
+def feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
+    df = process_datetime(df, cons.DATETIME_COLUMN)
+    df = extract_time_features(df, cons.DATETIME_COLUMN)
+    return df
 
 def process_datetime(df: pd.DataFrame, datetime_column: str) -> pd.DataFrame:
     """Convert DateTime column to a proper datetime object and validate entries."""
@@ -21,8 +27,69 @@ def extract_time_features(df: pd.DataFrame, datetime_column: str) -> pd.DataFram
     df['hour_sin'] = np.sin(2 * np.pi * df['hour'] / 24)
     df['hour_cos'] = np.cos(2 * np.pi * df['hour'] / 24)
     df['day_of_week'] = df[datetime_column].dt.dayofweek
-    return df.drop(columns=['hour'])
+    return df.drop(columns=['hour', cons.DATETIME_COLUMN])
 
+def one_hot_encode_test(df, encoder_path=None, verbose=False):
+    """One hot encode categorical columns using a pre-fitted encoder.
+    
+    Args:
+        df (pd.DataFrame): Input DataFrame
+        encoder_path (str): Path to the saved encoder
+        verbose (bool): Whether to print verbose output
+        
+    Returns:
+        pd.DataFrame: DataFrame with one-hot encoded categorical columns
+    """
+    if encoder_path is None:
+        raise ValueError("encoder_path must be provided for test data encoding")
+        
+    with open(encoder_path, 'rb') as f:
+        one_hot = pickle.load(f)
+        
+    # Transform categorical columns using loaded encoder
+    categorical_data = df[cons.CATEGORICAL]
+    encoded_data = one_hot.transform(categorical_data)
+    
+    # Convert encoded array back to dataframe with proper column names
+    encoded_df = pd.DataFrame(encoded_data, columns=one_hot.get_feature_names_out(cons.CATEGORICAL))
+    
+    # Drop original categorical columns and add encoded ones
+    df = df.drop(columns=cons.CATEGORICAL)
+    df = pd.concat([df, encoded_df], axis=1)
+
+    return df
+
+def one_hot_encode_train(df, encoder_path=None, verbose=False):
+    """One hot encode categorical columns and optionally save the fitted encoder.
+    
+    Args:
+        df (pd.DataFrame): Input DataFrame
+        encoder_path (str, optional): Path to save the fitted encoder
+        verbose (bool): Whether to print verbose output
+        
+    Returns:
+        pd.DataFrame: DataFrame with one-hot encoded categorical columns
+    """
+    # One hot encode categorical columns
+    one_hot = OneHotEncoder(sparse=False, handle_unknown='ignore')
+    categorical_data = df[cons.CATEGORICAL]  # Fixed typo in constant name
+    encoded_data = one_hot.fit_transform(categorical_data)
+    
+    # Convert encoded array back to dataframe with proper column names
+    encoded_df = pd.DataFrame(encoded_data, columns=one_hot.get_feature_names_out(cons.CATEGORICAL))
+    
+    # Drop original categorical columns and add encoded ones
+    df = df.drop(columns=cons.CATEGORICAL)
+    df = pd.concat([df, encoded_df], axis=1)
+
+    # Save the fitted encoder if path provided
+    if encoder_path:
+        os.makedirs(os.path.dirname(encoder_path), exist_ok=True)
+        with open(encoder_path, 'wb') as f:
+            pickle.dump(one_hot, f)
+        log(f"Saved one-hot encoder to {encoder_path}", verbose)
+        
+    return df
 
 
 def main():
@@ -44,73 +111,33 @@ def main():
     df = df.drop(columns=cons.COLUMNS_TO_DROP)
     df = df.drop(columns=cons.INDEX_COLUMNS)
 
-    ## 2. One Hot Encoding
 
     if not args.test:
-        # Encode categorical columns with one-hot encoding
-
-        # Initialize OneHotEncoder
-        one_hot = OneHotEncoder(sparse=False, handle_unknown='ignore')
-        
-        # Fit and transform categorical columns
-        categorical_data = df[cons.CATEGORIAL]
-        one_hot.fit(categorical_data)
-
-        # Save the fitted encoder
-        os.makedirs(os.path.dirname(args.one_hot_encoder_path), exist_ok=True)
-        with open(args.one_hot_encoder_path, 'wb') as f:
-            pickle.dump(one_hot, f)
-        
-        log(f"Saved one-hot encoder to {args.one_hot_encoder_path}", args.verbose)
+        df = one_hot_encode_train(df, args.one_hot_encoder_path, args.verbose)
     else:
-        with open(args.one_hot_encoder_path, 'rb') as f:
-            one_hot = pickle.load(f)
-            df = one_hot.transform(df[cons.CATEGORIAL])
-    
-    ## 3. Imputation and Cleaning of data
+        df = one_hot_encode_test(df, args.one_hot_encoder_path, args.verbose)
 
-    if not args.test:
-        df = df.dropna()
-        df = df.drop_duplicates()
-    else:
-        df = df.fillna(0)
-    
-    ## 4. Feature Engineering
+    ## 3. Feature Engineering
 
     df = process_datetime(df, cons.DATETIME_COLUMN)
     df = extract_time_features(df, cons.DATETIME_COLUMN)
 
+    ## 4. Impute missing values
+    if not args.test:
+        imputer = SimpleImputer(strategy='mean')
+        df = imputer.fit(df)
+        # Save the fitted imputer
+        os.makedirs(os.path.dirname(args.imputer_path), exist_ok=True)
+        with open(args.imputer_path, 'wb') as f:
+            pickle.dump(imputer, f)
+        log(f"Saved imputer to {args.imputer_path}", args.verbose)
+
+        df = df.dropna()
+        df = df.drop_duplicates()
+    
     ## 5. Save the processed data
 
-    if not args.test:
-        df.to_csv(os.path.join(args.out_path, cons.DEFAULT_RAW_TRAIN_FILE), index=False)
-        log(f"Processed training data saved to {cons.DEFAULT_RAW_TRAIN_FILE}.", args.verbose)
-    else:
-        df.to_csv(os.path.join(args.out_path, cons.DEFAULT_EXTERNAL_RAW_TEST_FILE), index=False)
-        log(f"Processed test data saved to {cons.DEFAULT_EXTERNAL_RAW_TEST_FILE}.", args.verbose)
 
-
-    
-
-    
-    
-
-        
-
-    
-    
-
-
-
-
-
-
-
-
-
-
-
-      
     if not args.test: 
         # 3. Split the data into features (X) and target (y)
         X, y = split_dataset_Xy(df)
