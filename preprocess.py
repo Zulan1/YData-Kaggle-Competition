@@ -111,7 +111,6 @@ def main():
     df = df.drop(columns=cons.COLUMNS_TO_DROP)
     df = df.drop(columns=cons.INDEX_COLUMNS)
 
-
     if not args.test:
         df = one_hot_encode_train(df, args.one_hot_encoder_path, args.verbose)
     else:
@@ -119,10 +118,10 @@ def main():
 
     ## 3. Feature Engineering
 
-    df = process_datetime(df, cons.DATETIME_COLUMN)
-    df = extract_time_features(df, cons.DATETIME_COLUMN)
+    df = feature_engineering(df)
 
     ## 4. Impute missing values
+
     if not args.test:
         imputer = SimpleImputer(strategy='mean')
         df = imputer.fit(df)
@@ -137,9 +136,7 @@ def main():
     
     ## 5. Save the processed data
 
-
     if not args.test: 
-        # 3. Split the data into features (X) and target (y)
         X, y = split_dataset_Xy(df)
 
         # First split: Train and Temp (for validation + test)
@@ -154,36 +151,26 @@ def main():
         train = combine_Xy(X_train, y_train)
         val = combine_Xy(X_val, y_val)
         test = combine_Xy(X_test, y_test)
-
-        # 4. Encode categorical features after splitting to avoid data leakage
-        train_encoded, val_encoded, test_encoded = encode_data(
-            train, val, test, categorical_columns=cons.CATEGORIAL)
         
-        # 5. Column Alignment
-        all_columns = set(train_encoded.columns).union(val_encoded.columns).union(test_encoded.columns)
-        train_encoded = align_columns(train_encoded, all_columns)
-        val_encoded = align_columns(val_encoded, all_columns)
-        test_encoded = align_columns(test_encoded, all_columns)
-
         # 6. Multi-Level Index for Traceability
         try:
-            train_encoded.set_index(cons.INDEX_COLUMNS, inplace=True, drop=True)
-            val_encoded.set_index(cons.INDEX_COLUMNS, inplace=True, drop=True)
-            test_encoded.set_index(cons.INDEX_COLUMNS, inplace=True, drop=True)
+            train.set_index(cons.INDEX_COLUMNS, inplace=True, drop=True)
+            val.set_index(cons.INDEX_COLUMNS, inplace=True, drop=True)
+            test.set_index(cons.INDEX_COLUMNS, inplace=True, drop=True)
         except KeyError as e:
             raise KeyError(f"Ensure all index columns {cons.INDEX_COLUMNS} exist in the dataset. Missing columns: {e}")
 
         # 7. Align Indices of y Sets to Match X Sets
-        y_train = pd.Series(y_train.values, index=train_encoded.index, name=cons.TARGET_COLUMN)
-        y_val = pd.Series(y_val.values, index=val_encoded.index, name=cons.TARGET_COLUMN)
-        y_test = pd.Series(y_test.values, index=test_encoded.index, name=cons.TARGET_COLUMN)
+        y_train = pd.Series(y_train.values, index=train.index, name=cons.TARGET_COLUMN)
+        y_val = pd.Series(y_val.values, index=val.index, name=cons.TARGET_COLUMN)
+        y_test = pd.Series(y_test.values, index=test.index, name=cons.TARGET_COLUMN)
 
-        log(f"Training set created with {len(train_encoded)} samples.", args.verbose)
-        log(f"Validation set created with {len(val_encoded)} samples.", args.verbose)
-        log(f"Test set created with {len(test_encoded)} samples.", args.verbose)
+        log(f"Training set created with {len(train)} samples.", args.verbose)
+        log(f"Validation set created with {len(val)} samples.", args.verbose)
+        log(f"Test set created with {len(test)} samples.", args.verbose)
 
         # 8. Save the datasets using the helper function
-        save_data_for_training(train_encoded, val_encoded, test_encoded, path=args.out_path)
+        save_data_for_training(train, val, test, path=args.out_path)
 
     else:
         # 9. Process the external test set (for prediction)
