@@ -19,13 +19,11 @@ def get_train_args():
     return parser.parse_args()
 
 def get_preprocessing_args():
-    parser = argparse.ArgumentParser(description='Preprocess the data')
-
+    parser = argparse.ArgumentParser(description='Data Processing Pipeline')
     parser.add_argument('--input-path', default=cons.DEFAULT_RAW_TRAIN_FILE, type=str, help='CSV filename to load')
     parser.add_argument('--out-path', type=str, help='Output directory of all proccessed csv files: train, val, test')
     parser.add_argument('--verbose', action='store_true', help='Print additional information')
-    parser.add_argument('--test', type=bool, help='Run on test rather on train dataset')
-
+    parser.add_argument('--test', type=bool, help='Preprocess external test set only')
     return parser.parse_args()
 
 

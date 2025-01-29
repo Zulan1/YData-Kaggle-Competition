@@ -1,25 +1,29 @@
 from invoke import task
-
 @task
-def preprocess(ctx):
-    print("Running preprocess step...")
-    ctx.run('python preprocess.py --input-path data/train_dataset_full.csv --out-path data/')
-    # Add invoke logic for preprocessing
-
+def preprocess(c):
+    print("Running raw data preprocess step...")
+    c.run("python preprocess.py --input-path=./data/train_dataset_full.csv --out-path=./data/ --verbose")
+          
 @task
-def train(ctx):
+def train(c):
     print("Running training step...")
-    ctx.run('python train.py --optuna-search')
+    c.run("python train.py --optuna-search")
     # Add invoke logic for training
-
 @task
-def predict(ctx):
+def predict(c):
     print("Running prediction step...")
-    ctx.run('python predict.py --input-path data/test_dataset.csv --out-path data/')
+    c.run('python predict.py --input-path data/test_dataset.csv --out-path data/')
     # Add invoke logic for prediction
-
 @task
-def analyze(ctx):
+def analyze(c):
     print("Running analysis step...")
-    ctx.run('python analyze.py --input-path data/predictions.csv')
-
+    # Add invoke logic for result analysis
+@task
+def echo(c, name):
+    print(f"Hello, {name}!")
+@task
+def pipeline(c):
+    c.run("python preprocess.py")
+    # c.run("python train.py")
+    
+ 
