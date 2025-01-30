@@ -8,6 +8,8 @@ DEFAULT_TRAIN_SET_FILE = 'train.csv'
 DEFAULT_VAL_SET_FILE = 'val.csv'
 DEFAULT_TEST_SET_FILE = 'test.csv'
 
+DEFAULT_PROCESSED_TEST_FILE = 'processed_test.csv'
+
 COLUMNS_TO_DROP = ['product_category_2', 'city_development_index']
 DATETIME_COLUMN = 'DateTime'
 TARGET_COLUMN = 'is_click'
