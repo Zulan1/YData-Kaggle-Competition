@@ -57,27 +57,30 @@ def main():
         print(f"Loading model from {args.model_path}")
     
 
-    df = get_data(args.input_data)
+    df = get_data(args.input_path)
     if args.verbose:
-        print(f"Loading data from {args.input_data}")
+        print(f"Loading data from {args.input_path}")
         
     df = df.fillna(df.mode().iloc[0])
     df.drop(columns=cons.INDEX_COLUMNS, inplace=True)
-    df = feature_engineering(df, args.verbose)
+    df = feature_engineering(df)
     df = transform_categorical_columns(df, args.ohe_path, args.verbose)
 
-    predictions = get_predictions(df)
+    predictions = get_predictions(model, df)
     if args.verbose:
-        print(f"Predicted {cons.TARGET} for {args.input_data}")
+        print(f"Predicted {cons.TARGET_COLUMN} for {args.input_path}")
     # Add predictions to the DataFrame
-    df[cons.TARGET] = predictions
+    df[cons.TARGET_COLUMN] = predictions
 
-    # Save predictions to CSV
-    predictions_path = os.path.join(os.path.dirname(args.predictions_path), 'predictions.csv')
-    df.to_csv(predictions_path, index=False)
+    # Create the output directory if it doesn't exist
+    os.makedirs(os.path.dirname(args.predictions_path), exist_ok=True)
+    
+    # Use the provided path or default if none
+    output_path = args.predictions_path if args.predictions_path else os.path.join('data', 'predictions', cons.DEFAULT_PREDICTIONS_FILE)
+    df.to_csv(output_path, index=False)
     
     if args.verbose:
-        print(f"Predictions saved to {predictions_path}")
+        print(f"Predictions saved to {output_path}")
 
 if __name__ == '__main__':
     main()

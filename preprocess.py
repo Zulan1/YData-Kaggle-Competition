@@ -72,7 +72,7 @@ def extract_time_features(df: pd.DataFrame, datetime_column: str) -> pd.DataFram
     df['hour_sin'] = np.sin(2 * np.pi * df['hour'] / 24)
     df['hour_cos'] = np.cos(2 * np.pi * df['hour'] / 24)
     df['day_of_week'] = df[datetime_column].dt.dayofweek
-    return df.drop(columns=['hour'])
+    return df.drop(columns=['hour', 'DateTime'])
 
 
 def main():
@@ -131,7 +131,7 @@ def main():
     else:
         df.drop(columns=cons.TARGET_COLUMN, inplace=True)
         output_path = args.output_path if args.output_path else cons.DEFAULT_PROCESSED_TRAIN_FILE
-        df.to_csv(output_path)
+        df.to_csv(output_path, index=False)
         log(f"Test set saved to {output_path}.", args.verbose)
 
 if __name__ == '__main__':

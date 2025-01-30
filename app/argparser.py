@@ -24,16 +24,17 @@ def get_preprocessing_args():
     parser.add_argument('--output-path', type=str, help='Output directory of all proccessed csv files: train, val, test')
     parser.add_argument('--verbose', action='store_true', help='Print additional information')
     parser.add_argument('--test', type=bool, help='Preprocess external test set only')
-    parser.add_argument('--one_hot_encoder_path', default=cons.DEFAULT_ONE_HOT_ENCODER_PATH, type=str, help='Path to the one hot encoder')
+    parser.add_argument('--one_hot_encoder_path', default=cons.DEFAULT_ONE_HOT_ENCODER_FILE, type=str, help='Path to the one hot encoder')
     return parser.parse_args()
 
 
 def get_predict_args():
     parser = argparse.ArgumentParser(description='Predict on new data')
     parser.add_argument('--model-path', type=str, required=True, help='Path to the trained model')
-    parser.add_argument('--input-data', type=str, required=True, help='Path to input data for prediction')
+    parser.add_argument('--input-path', type=str, required=True, help='Path to input data for prediction')
+    parser.add_argument('--predictions-path', type=str, default=cons.DEFAULT_PREDICTIONS_FILE, help='Path to output data for prediction')
     parser.add_argument('--verbose', action='store_true', help='Print additional information')
-    parser.add_argument('--one_hot_encoder_path', default=cons.DEFAULT_ONE_HOT_ENCODER_PATH, type=str, help='Path to the one hot encoder')
+    parser.add_argument('--ohe-path', default=cons.DEFAULT_ONE_HOT_ENCODER_FILE, type=str, help='Path to the one hot encoder')
     return parser.parse_args()
 
 def get_result_args():
