@@ -2,7 +2,7 @@
 DATA_PATH = 'data/'
 DEFAULT_RAW_TRAIN_FILE = 'train_dataset_full.csv'
 DEFAULT_EXTERNAL_RAW_TEST_FILE = 'X_test_1st_raw.csv'
-ONE_HOT_ENCODER_PATH = 'ohe.pkl'
+DEFAULT_ONE_HOT_ENCODER_PATH = 'ohe.pkl'
 
 DEFAULT_TRAIN_SET_FILE = 'train.csv'
 DEFAULT_VAL_SET_FILE = 'val.csv'
