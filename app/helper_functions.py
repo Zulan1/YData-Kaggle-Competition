@@ -5,6 +5,32 @@ from datetime import datetime
 from typing import Tuple
 import constants as cons
 
+
+def prepare_features_for_model(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Selects relevant features and performs one-hot encoding on categorical columns.
+    
+    Args:
+        df (pd.DataFrame): Input dataframe with raw features
+        
+    Returns:
+        pd.DataFrame: Processed dataframe with selected and encoded features
+    """
+    # Make a copy to avoid modifying original
+    df = df.copy()
+    
+    # Select only the columns we want to use as features
+    df = df[cons.FEATURES]
+    
+    # Get categorical columns that need encoding
+    categorical_cols = df.select_dtypes(include=['object', 'category']).columns
+    
+    # Perform one-hot encoding
+    df = pd.get_dummies(df, columns=categorical_cols, drop_first=True)
+    
+    return df
+
+
 def log(message: str, verbose: bool, level="INFO"):
     """
     Logs a message with an optional timestamp and log level.
@@ -44,6 +70,18 @@ def clean_data(df):
     return df
 '''
 
+def impute(df):
+    """
+    Impute missing values in the DataFrame using mode.
+    
+    Args:
+        df (pd.DataFrame): Input DataFrame with missing values
+        
+    Returns:
+        pd.DataFrame: DataFrame with missing values imputed
+    """
+    return df.fillna(df.mode().iloc[0])
+
 
 def remove_duplicates(df: pd.DataFrame) -> pd.DataFrame:
     """Remove duplicate rows from the DataFrame."""
@@ -56,6 +94,11 @@ def drop_high_missing_columns(df: pd.DataFrame, columns_to_drop: list) -> pd.Dat
 def drop_missing_values(df: pd.DataFrame) -> pd.DataFrame:
     """Drop all rows with missing values."""
     return df.dropna()
+
+def feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
+    df = process_datetime(df, cons.DATETIME_COLUMN)
+    df = extract_time_features(df, cons.DATETIME_COLUMN)
+    return df
 
 def process_datetime(df: pd.DataFrame, datetime_column: str) -> pd.DataFrame:
     """Convert DateTime column to a proper datetime object and validate entries."""
@@ -150,9 +193,8 @@ def encode_data(train: pd.DataFrame, val: pd.DataFrame, test: pd.DataFrame, cate
     return train_encoded, val_encoded, test_encoded
 
 
-def save_data_for_training(train, val, test, path=cons.DATA_PATH):
+def save_data_for_training(train, val, test, path):
     """Save train, validation, and test sets to CSV files."""
-    os.makedirs(path, exist_ok=True)
     train.to_csv(f'{path}/{cons.DEFAULT_TRAIN_SET_FILE}', index=False)
     val.to_csv(f'{path}/{cons.DEFAULT_VAL_SET_FILE}', index=False)
     test.to_csv(f'{path}/{cons.DEFAULT_TEST_SET_FILE}', index=False)

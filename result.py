@@ -4,6 +4,7 @@ from sklearn.metrics import f1_score
 from sklearn.metrics import confusion_matrix
 import pandas as pd
 import constants as cons
+import os
 
 def get_predictions(predictions_path):
     return pd.read_csv(predictions_path)
@@ -13,26 +14,22 @@ def get_labels(labels_path):
 
 def main():
     args = get_result_args()
+    run_id = args.run_id
+    predictions_path = os.path.join(args.input_path, f"predict_{run_id}/{cons.DEFAULT_PREDICTIONS_FILE}")
+    predictions = pd.read_csv(predictions_path)
+
+    features_path = os.path.join(args.input_path, f"preprocess_{run_id}/{cons.DEFAULT_PROCESSED_TEST_FILE}")
+    features = pd.read_csv(features_path)
+
+    df = pd.concat([features, predictions], axis=1)
+    output_path = os.path.join(args.output_path, f"result_{run_id}")
+    os.makedirs(output_path, exist_ok=True)
+    file_path = os.path.join(output_path, f"{cons.DEFAULT_RESULTS_FILE}")
+    df.to_csv(file_path, index=False)
 
     if args.verbose:
-        print(f"Loading predictions from {args.predictions_path}")
-
-    df = get_predictions(args.predictions_path)
-
-    if args.verbose:
-        print(f"Loading labels from {args.labels_path}")
-
-    labels = get_labels(args.labels_path)
-
-    print(f"Analyzing results from {args.predictions_path}")
-    print(f"F1 score: {f1_score(labels, df[cons.TARGET])}")
-    print(f"Confusion matrix: {confusion_matrix(labels, df[cons.TARGET])}")
-
-    if args.verbose:
-        print(f"Saving results to {args.results_path}")
-
-    df.to_csv(args.results_path, index=False)
-
+        print(f"Results saved to {file_path}")
 
 if __name__ == '__main__':
     main()
+

@@ -180,14 +180,17 @@ def main():
 
     model = get_model(args, X_train, y_train, X_val, y_val)
     model.fit(X_train, y_train)
-    score = compute_score(args.scoring_method, y_val, model.predict(X_val))
+    predictions = model.predict(X_val)
+    score = compute_score(args.scoring_method, y_val, predictions)
+    print(confusion_matrix(y_val, predictions))
     wandb.log({args.scoring_method: score})
     print(f"Final score: {score}")
+
     
-    os.makedirs('models', exist_ok=True)
-    timestamp = time.time()
-    with open(f'models/model_{timestamp:.0f}.pkl', 'wb') as p:
-        pickle.dump(model, p)   
+    output_path = f'{args.output_path}/train_{args.run_id}'
+    os.makedirs(output_path, exist_ok=True)
+    with open(f'{output_path}/model.pkl', 'wb') as p:
+        pickle.dump(model, p)
             
 if __name__ == '__main__':
     main()

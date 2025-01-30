@@ -12,19 +12,11 @@ from app.helper_functions import split_dataset_Xy, combine_Xy, save_data_for_tra
 from app.argparser import get_preprocessing_args
 from app.helper_functions import encode_data, align_columns
 
-def encode_and_save_transformers(df: pd.DataFrame, output_path: str, verbose: bool) -> pd.DataFrame:
+def one_hot_encode(df):
     """
-    Perform one-hot encoding on categorical columns and save the encoder.
-    
-    Args:
-        df (pd.DataFrame): Input DataFrame
-        output_path (str): Path to save the encoder
-        verbose (bool): Whether to print verbose output
-        
-    Returns:
-        pd.DataFrame: DataFrame with one-hot encoded categorical columns
+    Encode categorical columns using OneHotEncoder
+    return the encoded DataFrame and the encoder
     """
-    # Initialize OneHotEncoder
     ohe = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
     
     # Fit and transform categorical columns
@@ -39,16 +31,18 @@ def encode_and_save_transformers(df: pd.DataFrame, output_path: str, verbose: bo
     # Drop original categorical columns and join encoded ones
     df = df.drop(columns=cons.CATEGORICAL)
     df = pd.concat([df, encoded_df], axis=1)
-    
-    # Save the encoder
-    ohe_path = os.path.join(output_path, 'ohe.pkl')
-    with open(ohe_path, 'wb') as f:
+
+    return df, ohe
+
+def save_ohe_to_file(ohe, path, verbose):
+    """
+    Save the OneHotEncoder to a file
+    """
+    with open(path, 'wb') as f:
         pickle.dump(ohe, f)
-    
     if verbose:
-        print(f"OneHotEncoder saved to {ohe_path}")
-        
-    return df
+        print(f"OneHotEncoder saved to {path}")
+    
 
 def save_data_for_prediction(df: pd.DataFrame, path: str):
     df.to_csv(path, index=False)
@@ -77,6 +71,11 @@ def extract_time_features(df: pd.DataFrame, datetime_column: str) -> pd.DataFram
 
 def main():
     args = get_preprocessing_args()
+    run_id = args.run_id
+    output_path = os.path.join(args.output_path, f"preprocess_{run_id}")
+    os.makedirs(output_path, exist_ok=True)
+    train_mode = not args.test
+    test_mode = args.test
     full_fn = args.input_path
     log(f"Processing file: {full_fn}", args.verbose)
     df = pd.read_csv(full_fn)
@@ -87,11 +86,12 @@ def main():
 
     df = df.drop(columns=cons.COLUMNS_TO_DROP)
 
-    if not args.test:
+    if train_mode:
         df = df.dropna()
         df = df.drop_duplicates()
         df = feature_engineering(df)
-        df = encode_and_save_transformers(df, args.output_path, args.verbose)
+        df, ohe = one_hot_encode(df)
+        save_ohe_to_file(ohe, f"{output_path}/ohe.pkl", args.verbose)
 
         X, y = split_dataset_Xy(df)
 
@@ -107,7 +107,6 @@ def main():
         train = combine_Xy(X_train, y_train)
         val = combine_Xy(X_val, y_val)
         test = combine_Xy(X_test, y_test)
-
 
         # 6. Multi-Level Index for Traceability
         try:
@@ -127,10 +126,11 @@ def main():
         log(f"Test set created with {len(test)} samples.", args.verbose)
 
         # 8. Save the datasets using the helper function
-        save_data_for_training(train, val, test, path=args.output_path)
-    else:
+        save_data_for_training(train, val, test, output_path)
+
+    if test_mode:
         df.drop(columns=cons.TARGET_COLUMN, inplace=True)
-        output_path = args.output_path if args.output_path else cons.DEFAULT_PROCESSED_TRAIN_FILE
+        output_path = os.path.join(output_path, cons.DEFAULT_PROCESSED_TEST_FILE)
         df.to_csv(output_path, index=False)
         log(f"Test set saved to {output_path}.", args.verbose)
 
