@@ -132,10 +132,10 @@ def main():
         log(f"Test set created with {len(test_encoded)} samples.", args.verbose)
 
         # 8. Save the datasets using the helper function
-        save_data_for_training(train_encoded, val_encoded, test_encoded, path=args.out_path)
+        save_data_for_training(train_encoded, val_encoded, test_encoded, path=args.output_path)
     else:
         df.drop(columns=cons.TARGET_COLUMN, inplace=True)
-        df.to_csv(os.path.join(args.out_path, cons.DEFAULT_TEST_SET_FILE), index=False)
+        df.to_csv(os.path.join(args.output_path, cons.DEFAULT_TEST_SET_FILE), index=False)
         log(f"Test set saved to {cons.DEFAULT_TEST_SET_FILE}.", args.verbose)
 
 if __name__ == '__main__':
