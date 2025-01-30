@@ -25,7 +25,7 @@ def encode_and_save_transformers(df: pd.DataFrame, output_path: str, verbose: bo
         pd.DataFrame: DataFrame with one-hot encoded categorical columns
     """
     # Initialize OneHotEncoder
-    ohe = OneHotEncoder(sparse=False, handle_unknown='ignore')
+    ohe = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
     
     # Fit and transform categorical columns
     encoded_cats = ohe.fit_transform(df[cons.CATEGORICAL])
@@ -73,8 +73,6 @@ def extract_time_features(df: pd.DataFrame, datetime_column: str) -> pd.DataFram
 
 def main():
     args = get_preprocessing_args()
-    if args.verbose:
-        print(f"Args: {args.test}")
     full_fn = args.input_path
     log(f"Processing file: {full_fn}", args.verbose)
     df = pd.read_csv(full_fn)
@@ -106,38 +104,30 @@ def main():
         val = combine_Xy(X_val, y_val)
         test = combine_Xy(X_test, y_test)
 
-        # 4. Encode categorical features after splitting to avoid data leakage
-        train_encoded, val_encoded, test_encoded = encode_data(
-            train, val, test, categorical_columns=cons.CATEGORIAL)
-        
-        # 5. Column Alignment
-        all_columns = set(train_encoded.columns).union(val_encoded.columns).union(test_encoded.columns)
-        train_encoded = align_columns(train_encoded, all_columns)
-        val_encoded = align_columns(val_encoded, all_columns)
-        test_encoded = align_columns(test_encoded, all_columns)
 
         # 6. Multi-Level Index for Traceability
         try:
-            train_encoded.set_index(cons.INDEX_COLUMNS, inplace=True, drop=True)
-            val_encoded.set_index(cons.INDEX_COLUMNS, inplace=True, drop=True)
-            test_encoded.set_index(cons.INDEX_COLUMNS, inplace=True, drop=True)
+            train.set_index(cons.INDEX_COLUMNS, inplace=True, drop=True)
+            val.set_index(cons.INDEX_COLUMNS, inplace=True, drop=True)
+            test.set_index(cons.INDEX_COLUMNS, inplace=True, drop=True)
         except KeyError as e:
             raise KeyError(f"Ensure all index columns {cons.INDEX_COLUMNS} exist in the dataset. Missing columns: {e}")
 
         # 7. Align Indices of y Sets to Match X Sets
-        y_train = pd.Series(y_train.values, index=train_encoded.index, name=cons.TARGET_COLUMN)
-        y_val = pd.Series(y_val.values, index=val_encoded.index, name=cons.TARGET_COLUMN)
-        y_test = pd.Series(y_test.values, index=test_encoded.index, name=cons.TARGET_COLUMN)
+        y_train = pd.Series(y_train.values, index=train.index, name=cons.TARGET_COLUMN)
+        y_val = pd.Series(y_val.values, index=val.index, name=cons.TARGET_COLUMN)
+        y_test = pd.Series(y_test.values, index=test.index, name=cons.TARGET_COLUMN)
 
-        log(f"Training set created with {len(train_encoded)} samples.", args.verbose)
-        log(f"Validation set created with {len(val_encoded)} samples.", args.verbose)
-        log(f"Test set created with {len(test_encoded)} samples.", args.verbose)
+        log(f"Training set created with {len(train)} samples.", args.verbose)
+        log(f"Validation set created with {len(val)} samples.", args.verbose)
+        log(f"Test set created with {len(test)} samples.", args.verbose)
 
         # 8. Save the datasets using the helper function
-        save_data_for_training(train_encoded, val_encoded, test_encoded, path=args.output_path)
+        save_data_for_training(train, val, test, path=args.output_path)
     else:
         df.drop(columns=cons.TARGET_COLUMN, inplace=True)
-        df.to_csv(os.path.join(args.output_path, cons.DEFAULT_TEST_SET_FILE), index=False)
+        df.set_index(cons.INDEX_COLUMNS, inplace=True, drop=True)
+        df.to_csv(os.path.join(args.output_path, cons.DEFAULT_TEST_SET_FILE))
         log(f"Test set saved to {cons.DEFAULT_TEST_SET_FILE}.", args.verbose)
 
 if __name__ == '__main__':
