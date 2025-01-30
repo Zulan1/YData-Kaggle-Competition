@@ -13,7 +13,7 @@ DEFAULT_PROCESSED_TEST_FILE = 'processed_test.csv'
 COLUMNS_TO_DROP = ['product_category_2', 'city_development_index']
 DATETIME_COLUMN = 'DateTime'
 TARGET_COLUMN = 'is_click'
-INDEX_COLUMNS = ['session_id', 'DateTime', 'user_id']
+INDEX_COLUMNS = ['session_id', 'user_id']
 
 
 #Column names groups:

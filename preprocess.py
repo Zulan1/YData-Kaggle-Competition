@@ -50,6 +50,10 @@ def encode_and_save_transformers(df: pd.DataFrame, output_path: str, verbose: bo
         
     return df
 
+def save_data_for_prediction(df: pd.DataFrame, path: str):
+    df.to_csv(path, index=False)
+    return df
+
 def feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
     df = process_datetime(df, cons.DATETIME_COLUMN)
     df = extract_time_features(df, cons.DATETIME_COLUMN)
@@ -126,9 +130,9 @@ def main():
         save_data_for_training(train, val, test, path=args.output_path)
     else:
         df.drop(columns=cons.TARGET_COLUMN, inplace=True)
-        df.set_index(cons.INDEX_COLUMNS, inplace=True, drop=True)
-        df.to_csv(os.path.join(args.output_path, cons.DEFAULT_TEST_SET_FILE))
-        log(f"Test set saved to {cons.DEFAULT_TEST_SET_FILE}.", args.verbose)
+        output_path = args.output_path if args.output_path else cons.DEFAULT_PROCESSED_TRAIN_FILE
+        df.to_csv(output_path)
+        log(f"Test set saved to {output_path}.", args.verbose)
 
 if __name__ == '__main__':
     main()
