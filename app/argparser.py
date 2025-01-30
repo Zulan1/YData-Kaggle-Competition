@@ -16,7 +16,7 @@ def get_train_args():
 
     parser.add_argument('--kernel', type=str, default=None, help='The kernel for SVM')
     parser.add_argument('--run-id', type=str, help='Run ID')
-    parser.add_argument('--output-path', type=str, help='Path to the trained model')
+    parser.add_argument('--output-path', type=str, default='models', help='Path to the trained model')
 
     return parser.parse_args()
 

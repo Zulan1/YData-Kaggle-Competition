@@ -88,13 +88,13 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
         wandb.log({f'best {args.scoring_method}': best_score})
 
     def objective(trial):
-        model_types = ['LogisticRegression', 'RandomForest', 'XGBoost'] if args.model_type is None else [args.model_type]
+        model_types = ['LogisticRegression', 'RandomForest', 'XGBoost', 'LightGBM'] if args.model_type is None else [args.model_type]
         model_type = trial.suggest_categorical('model_type', model_types)
         match model_type:
             case 'LogisticRegression':
                 hparams = {
                     'C': trial.suggest_float('C', 1e-10, 1e10, log=True),
-                    'class_weight': trial.suggest_categorical('class_weight', ['balanced', None])
+                    'class_weight': trial.suggest_categorical('class_weight_lr', ['balanced', None])
                 }
                 model = LogisticRegression()
             case 'RandomForest':
@@ -103,7 +103,7 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
                     'criterion': trial.suggest_categorical('criterion', ['gini', 'entropy']),
                     'max_depth': trial.suggest_int('max_depth', 1, 10),
                     'min_samples_split': trial.suggest_int('min_samples_split', 20, 100),
-                    'class_weight': trial.suggest_categorical('class_weight', ['balanced', 'balanced_subsample', None])
+                    'class_weight': trial.suggest_categorical('class_weight_rf', ['balanced', 'balanced_subsample', None])
                 }
                 model = RandomForestClassifier()
             case 'SVM':
@@ -129,8 +129,8 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
                     'max_depth': trial.suggest_int('max_depth', 3, 10),
                     'subsample': trial.suggest_float('subsample', 0.5, 1.0),
                     'colsample_bytree': trial.suggest_float('colsample_bytree', 0.5, 1.0),
-                    'reg_alpha': trial.suggest_float('reg_alpha', 0, 2),
-                    'reg_lambda': trial.suggest_float('reg_lambda', 0, 2),
+                    'reg_alpha': trial.suggest_float('reg_alpha', 0, 0.1),
+                    'reg_lambda': trial.suggest_float('reg_lambda', 0, 0.1),
                 }
                 model = lgb.LGBMClassifier()
             case _:
@@ -148,22 +148,26 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
     study = optuna.create_study(direction='maximize')
     study.optimize(objective, n_trials=args.n_trials, callbacks=[log_score])
     print(f"Finished {args.n_trials} found best params: {study.best_params}, with score: {study.best_value}.")
+    os.makedirs('plots', exist_ok=True)
+    optuna.visualization.plot_optimization_history(study).write_image('plots/optuna_history.png')
+    optuna.visualization.plot_param_importances(study).write_image('plots/optuna_importances.png')
     return study.best_params
 
 def main():
     args = get_train_args()
 
-    df_train, df_val, _ = load_training_data()
+    df_train, df_val, df_test = load_training_data()
     X_train, y_train = split_dataset_Xy(df_train)
     X_val, y_val = split_dataset_Xy(df_val)
-    selected_columns = cons.DEMOGRAPHICS
-    selected_columns = [col for col in X_train.columns if any(c in col for c in selected_columns)]
+    X_test, y_test = split_dataset_Xy(df_test)
+    # selected_columns = cons.DEMOGRAPHICS
+    # selected_columns = [col for col in X_train.columns if any(c in col for c in selected_columns)]
 
     # X_train.drop(columns=['DateTime', 'user_id', 'session_id'], inplace=True)
-    # X_val.drop(columns=['DateTime', 'user_id', 'session_id'], inplace=True)\
+    # X_val.drop(columns=['DateTime', 'user_id', 'session_id'], inplace=True)
     # X_train = X_train[selected_columns]
     # X_val = X_val[selected_columns]
-    # X_train, y_train = SMOTE().fit_resample(X_train, y_train)
+    X_train, y_train = SMOTE().fit_resample(X_train, y_train)
     
 
     dmy_cls = DummyClassifier(strategy='most_frequent')
@@ -191,6 +195,13 @@ def main():
     os.makedirs(output_path, exist_ok=True)
     with open(f'{output_path}/model.pkl', 'wb') as p:
         pickle.dump(model, p)
+    
+    predictions = model.predict(X_test)
+    score = compute_score(args.scoring_method, y_test, predictions)
+    print(confusion_matrix(y_test, predictions))
+    print(f"Final Test Model score {args.scoring_method}: {score}")
+    wandb.log({f'test_{args.scoring_method}': score})
+
             
 if __name__ == '__main__':
     main()
