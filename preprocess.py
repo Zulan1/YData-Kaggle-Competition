@@ -74,7 +74,7 @@ def extract_time_features(df: pd.DataFrame, datetime_column: str) -> pd.DataFram
 def main():
     args = get_preprocessing_args()
     if args.verbose:
-        print(f"Args: {args}")
+        print(f"Args: {args.test}")
     full_fn = args.input_path
     log(f"Processing file: {full_fn}", args.verbose)
     df = pd.read_csv(full_fn)
