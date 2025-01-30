@@ -24,6 +24,7 @@ def get_preprocessing_args():
     parser.add_argument('--out-path', type=str, help='Output directory of all proccessed csv files: train, val, test')
     parser.add_argument('--verbose', action='store_true', help='Print additional information')
     parser.add_argument('--test', type=bool, help='Preprocess external test set only')
+    parser.add_argument('--one_hot_encoder_path', default=cons.DEFAULT_ONE_HOT_ENCODER_PATH, type=str, help='Path to the one hot encoder')
     return parser.parse_args()
 
 
@@ -31,4 +32,14 @@ def get_predict_args():
     parser = argparse.ArgumentParser(description='Predict on new data')
     parser.add_argument('--model-path', type=str, required=True, help='Path to the trained model')
     parser.add_argument('--input-data', type=str, required=True, help='Path to input data for prediction')
+    parser.add_argument('--verbose', action='store_true', help='Print additional information')
+    parser.add_argument('--one_hot_encoder_path', default=cons.DEFAULT_ONE_HOT_ENCODER_PATH, type=str, help='Path to the one hot encoder')
+    return parser.parse_args()
+
+def get_result_args():
+    parser = argparse.ArgumentParser(description='Analyze results')
+    parser.add_argument('--predictions-path', type=str, required=True, help='Path to predictions file')
+    parser.add_argument('--results-path', type=str, required=True, help='Path to results file')
+    parser.add_argument('--verbose', action='store_true', help='Print additional information')
+    parser.add_argument('--labels-path', type=str, help='Path to save labels file')
     return parser.parse_args()

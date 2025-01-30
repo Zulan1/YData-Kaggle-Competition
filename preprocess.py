@@ -1,33 +1,94 @@
 import os
 import pandas as pd
 import constants as cons
-import os
+import numpy as np
 
 from sklearn.model_selection import train_test_split
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import OneHotEncoder
+import pickle
 
 from app.helper_functions import split_dataset_Xy, combine_Xy, save_data_for_training, log
-
-from app.helper_functions import align_columns, clean_data, split_dataset_Xy, combine_Xy, save_data_for_training, log, encode_data
 from app.argparser import get_preprocessing_args
+from app.helper_functions import encode_data, align_columns
+
+def encode_and_save_transformers(df: pd.DataFrame, output_path: str, verbose: bool) -> pd.DataFrame:
+    """
+    Perform one-hot encoding on categorical columns and save the encoder.
+    
+    Args:
+        df (pd.DataFrame): Input DataFrame
+        output_path (str): Path to save the encoder
+        verbose (bool): Whether to print verbose output
+        
+    Returns:
+        pd.DataFrame: DataFrame with one-hot encoded categorical columns
+    """
+    # Initialize OneHotEncoder
+    ohe = OneHotEncoder(sparse=False, handle_unknown='ignore')
+    
+    # Fit and transform categorical columns
+    encoded_cats = ohe.fit_transform(df[cons.CATEGORICAL])
+    
+    # Get feature names after encoding
+    feature_names = ohe.get_feature_names_out(cons.CATEGORICAL)
+    
+    # Create DataFrame with encoded values
+    encoded_df = pd.DataFrame(encoded_cats, columns=feature_names, index=df.index)
+    
+    # Drop original categorical columns and join encoded ones
+    df = df.drop(columns=cons.CATEGORICAL)
+    df = pd.concat([df, encoded_df], axis=1)
+    
+    # Save the encoder
+    ohe_path = os.path.join(output_path, 'ohe.pkl')
+    with open(ohe_path, 'wb') as f:
+        pickle.dump(ohe, f)
+    
+    if verbose:
+        print(f"OneHotEncoder saved to {ohe_path}")
+        
+    return df
+
+def feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
+    df = process_datetime(df, cons.DATETIME_COLUMN)
+    df = extract_time_features(df, cons.DATETIME_COLUMN)
+    return df
+
+def process_datetime(df: pd.DataFrame, datetime_column: str) -> pd.DataFrame:
+    """Convert DateTime column to a proper datetime object and validate entries."""
+    df[datetime_column] = pd.to_datetime(df[datetime_column], errors="coerce")
+    if df[datetime_column].isna().any():
+        raise ValueError("Invalid DateTime entries found during preprocessing.")
+    return df
+
+def extract_time_features(df: pd.DataFrame, datetime_column: str) -> pd.DataFrame:
+    """Extract hour, hour_sin, hour_cos, and day_of_week from the DateTime column."""
+    df['hour'] = df[datetime_column].dt.hour
+    df['hour_sin'] = np.sin(2 * np.pi * df['hour'] / 24)
+    df['hour_cos'] = np.cos(2 * np.pi * df['hour'] / 24)
+    df['day_of_week'] = df[datetime_column].dt.dayofweek
+    return df.drop(columns=['hour'])
+
 
 def main():
     args = get_preprocessing_args()
-
-    # 1. Validate and load CSV file
     full_fn = args.input_path
-    if not os.path.exists(full_fn):
-        raise FileNotFoundError(f"Input file '{full_fn}' does not exist.")
-    
+    log(f"Processing file: {full_fn}", args.verbose)
     df = pd.read_csv(full_fn)
     if df.empty:
-        raise ValueError("Input dataset is empty.")
-    log(f"Processing file: {full_fn}", args.verbose)
+        raise ValueError("The input file is empty.")
     
-    #2. Clean the data
-    df = clean_data(df, columns_to_drop=cons.COLUMNS_TO_DROP, datetime_column=cons.DATETIME_COLUMN)
-      
-    if not args.test: 
-        # 3. Split the data into features (X) and target (y)
+    ## 1. Drop unwanted columns
+
+    df = df.drop(columns=cons.COLUMNS_TO_DROP)
+
+    if not args.test:
+        df = df.dropna()
+        df = df.drop_duplicates()
+        df = feature_engineering(df)
+        df = encode_and_save_transformers(df, args.output_path, args.verbose)
+
         X, y = split_dataset_Xy(df)
 
         # First split: Train and Temp (for validation + test)
@@ -72,11 +133,7 @@ def main():
 
         # 8. Save the datasets using the helper function
         save_data_for_training(train_encoded, val_encoded, test_encoded, path=args.out_path)
-
     else:
-        # 9. Process the external test set (for prediction)
-        df.to_csv(os.path.join(args.csv_path, cons.DEFAULT_EXTERNAL_RAW_TEST_FILE), index=False)
-        log(f"Test set saved to {cons.DEFAULT_EXTERNAL_RAW_TEST_FILE}.", args.verbose)
-
-if __name__ == '__main__':
-    main()
+        df.drop(columns=cons.TARGET_COLUMN, inplace=True)
+        df.to_csv(os.path.join(args.csv_path, cons.DEFAULT_TEST_SET_FILE), index=False)
+        log(f"Test set saved to {cons.DEFAULT_TEST_SET_FILE}.", args.verbose)
