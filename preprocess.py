@@ -100,19 +100,26 @@ def main():
         labels_path = os.path.join(output_path, cons.DEFAULT_LABELS_FILE)
         holdout_labels.to_csv(labels_path, index=False)
         holdout_data = pd.concat([X_holdout, y_holdout], axis=1)
-        internal_data = pd.concat([X_internal, y_internal], axis=1)
-        processed_internal_data, ohe = preprocess_towards_training(internal_data)
+        
+        processed_X_internal, ohe = preprocess_towards_training(X_internal)
         save_ohe_to_file(ohe, f"{output_path}/ohe.pkl", args.verbose)
 
+        internal_data = pd.concat([processed_X_internal, y_internal], axis=1)
+
+        print('Debug (check if columns are correct):', processed_X_internal.columns)
+        input("Press Enter to continue...")
+
+
         X_train, X_val, y_train, y_val = train_test_split(
-            processed_internal_data, y_internal, test_size=cons.VAL_TEST_SPLIT, stratify=y_internal, random_state=cons.RANDOM_STATE)
+            processed_X_internal, y_internal, test_size=cons.VAL_TEST_SPLIT, stratify=y_internal, random_state=cons.RANDOM_STATE)
         
         train = pd.concat([X_train, y_train], axis=1)
         val = pd.concat([X_val, y_val], axis=1)
         save_data_for_training(train, val, output_path)
         if args.verbose:
             print(f"Saved preprocessed data to {output_path}")
-        X_holdout.to_csv(os.path.join(output_path, cons.DEFAULT_HOLDOUT_FILE), index=False)
+        holdout_data.to_csv(os.path.join(output_path, cons.DEFAULT_HOLDOUT_FILE), index=False)
+        internal_data.to_csv(os.path.join(output_path, cons.DEFAULT_TRAIN_PLUS_VAL_SET_FILE), index=False)
     
     if test_mode:
         df.drop(columns=cons.COLUMNS_TO_DROP, inplace=True)

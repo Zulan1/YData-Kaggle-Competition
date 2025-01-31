@@ -203,6 +203,7 @@ def load_training_data(path: str = cons.DATA_PATH,
                        train_fn: str = cons.DEFAULT_TRAIN_SET_FILE, 
                        val_fn: str = cons.DEFAULT_VAL_SET_FILE, 
                        holdout_fn: str = cons.DEFAULT_HOLDOUT_FILE,
+                       train_plus_val_fn: str = cons.DEFAULT_TRAIN_PLUS_VAL_SET_FILE,
                        run_id: str = None) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Load the train, validation, and test sets from CSV files.
@@ -221,12 +222,22 @@ def load_training_data(path: str = cons.DATA_PATH,
     if run_id is None:
         prefix = ""
     else:
-        prefix = f"preprocess_{run_id}/"
+        prefix = f"preprocess_{run_id}"
+    
+    full_fns = {'train': os.path.join(path,prefix,train_fn),
+                'val': os.path.join(path,prefix,val_fn),
+                'holdout': os.path.join(path,prefix,holdout_fn),
+                'train_plus_val': os.path.join(path,prefix,train_plus_val_fn)}
+    
+    for key, fn in full_fns.items():
+        if not os.path.exists(fn):
+            raise FileNotFoundError(f"File not found: {fn}")
+    
+    for key, fn in full_fns.items():
+        full_fns[key] = pd.read_csv(fn)
 
-    train = pd.read_csv(f'{path}{prefix + cons.DEFAULT_TRAIN_SET_FILE}')
-    val = pd.read_csv(f'{path}{prefix + cons.DEFAULT_VAL_SET_FILE}')
-    holdout = pd.read_csv(f'{path}{prefix + cons.DEFAULT_HOLDOUT_FILE}') 
-    return train, val, holdout
+
+    return tuple(full_fns[key] for key in ['train','val','holdout','train_plus_val'])
 
 
 def log(message: str, verbose: bool) -> None:

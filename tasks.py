@@ -51,6 +51,9 @@ def pipeline(c):
     5. Analyze results
     """
     run_id = get_timestamp_str()
+
+    run_id = "debug"
+
     c.run(f"python preprocess.py --run-id={run_id} --output-path=./data/ --input-path=./data/train_dataset_full.csv --verbose")
     c.run(f"python train.py --optuna-search --n-trials=3 --run-id={run_id} --output-path=./data/")
     c.run(f"python preprocess.py --test --run-id={run_id} --input-path=./data/preprocess_{run_id}/holdout.csv --output-path=./data/ --verbose")

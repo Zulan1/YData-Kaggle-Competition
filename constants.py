@@ -1,5 +1,5 @@
 # Paths and filenames:
-DATA_PATH = 'data/'
+DATA_PATH = 'data'
 DEFAULT_RAW_TRAIN_FILE = 'train_dataset_full.csv'
 DEFAULT_EXTERNAL_RAW_TEST_FILE = 'X_test_1st_raw.csv'
 DEFAULT_ONE_HOT_ENCODER_FILE = 'ohe.pkl'
@@ -9,6 +9,7 @@ DEFAULT_VAL_SET_FILE = 'val.csv'
 DEFAULT_TEST_SET_FILE = 'test.csv'
 DEFAULT_LABELS_FILE = 'labels.csv'
 DEFAULT_HOLDOUT_FILE = 'holdout.csv'
+DEFAULT_TRAIN_PLUS_VAL_SET_FILE = 'train_plus_val.csv'
 
 DEFAULT_PROCESSED_TEST_FILE = 'processed_test.csv'
 

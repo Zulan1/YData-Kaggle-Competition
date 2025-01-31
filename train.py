@@ -88,24 +88,24 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
         wandb.log({f'best {args.scoring_method}': best_score})
 
     def objective(trial):
-        model_types = ['XGBoost', 'LightGBM'] if args.model_type is None else [args.model_type]
+        model_types = ['XGBoost', 'RandomForest','LogisticRegression'] if args.model_type is None else [args.model_type]
         model_type = trial.suggest_categorical('model_type', model_types)
         match model_type:
-            # case 'LogisticRegression':
-            #     hparams = {
-            #         'C': trial.suggest_float('C', 1e-10, 1e10, log=True),
-            #         'class_weight': trial.suggest_categorical('class_weight_lr', ['balanced', None])
-            #     }
-            #     model = LogisticRegression()
-            # case 'RandomForest':
-            #     hparams = {
-            #         'n_estimators': trial.suggest_int('n_estimators', 10, 100),
-            #         'criterion': trial.suggest_categorical('criterion', ['gini', 'entropy']),
-            #         'max_depth': trial.suggest_int('max_depth', 1, 10),
-            #         'min_samples_split': trial.suggest_int('min_samples_split', 20, 100),
-            #         'class_weight': trial.suggest_categorical('class_weight_rf', ['balanced', 'balanced_subsample', None])
-            #     }
-            #     model = RandomForestClassifier()
+            case 'LogisticRegression':
+                hparams = {
+                    'C': trial.suggest_float('C', 1e-10, 1e10, log=True),
+                    #'class_weight': trial.suggest_categorical(['balanced'])
+                }
+                model = LogisticRegression()
+            case 'RandomForest':
+                hparams = {
+                    'n_estimators': trial.suggest_int('n_estimators', 10, 100),
+                    'criterion': trial.suggest_categorical('criterion', ['gini', 'entropy']),
+                    'max_depth': trial.suggest_int('max_depth', 1, 10),
+                    'min_samples_split': trial.suggest_int('min_samples_split', 20, 100),
+                    'class_weight': trial.suggest_categorical('class_weight', ['balanced', 'balanced_subsample', None])
+                }
+                model = RandomForestClassifier()
             case 'SVM':
                 hparams = {
                     'C': trial.suggest_float('C', 1e-10, 1e10, log=True),
@@ -155,11 +155,17 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
 
 def main():
     args = get_train_args()
-
-    df_train, df_val, df_test = load_training_data(run_id=args.run_id)
+    input("Press Enter to continue...")
+    df_train, df_val, df_holdout, df_train_plus_val = load_training_data(run_id=args.run_id)
     X_train, y_train = split_dataset_Xy(df_train)
     X_val, y_val = split_dataset_Xy(df_val)
-    X_test, y_test = split_dataset_Xy(df_test)
+    X_holdout, y_holdout = split_dataset_Xy(df_holdout)
+    X_train_plus_val, y_train_plus_val = split_dataset_Xy(df_train_plus_val)
+    print('Train Columns:', X_train.columns)
+    print('Val Columns:', X_val.columns)
+    print('Holdout Columns:', X_holdout.columns)
+    print('Train+Val Columns:', X_train_plus_val.columns)
+    input("Press Enter to continue...")
     # selected_columns = cons.DEMOGRAPHICS
     # selected_columns = [col for col in X_train.columns if any(c in col for c in selected_columns)]
 
@@ -196,11 +202,23 @@ def main():
     with open(f'{output_path}/model.pkl', 'wb') as p:
         pickle.dump(model, p)
     
-    predictions = model.predict(X_test)
-    score = compute_score(args.scoring_method, y_test, predictions)
-    print(confusion_matrix(y_test, predictions))
+    # Retrain on the full dataset:
+    model.fit(X_train_plus_val, y_train_plus_val)
+
+    predictions = model.predict(X_holdout)
+    score = compute_score(args.scoring_method, y_holdout, predictions)
+    print(confusion_matrix(y_holdout, predictions))
     print(f"Final Test Model score {args.scoring_method}: {score}")
+    bacc = compute_score('bacc', y_holdout, predictions)
+    bacc_adjusted = compute_score('aba', y_holdout, predictions)
+    mcc = compute_score('mcc', y_holdout, predictions)
+    other_scores = f"Other scores:" + f"Balanced ACC, not adjusted={compute_score('bacc', y_holdout, predictions):.4f}, " + f"Balanced ACC, adjusted= {compute_score('bacc', y_holdout, predictions, adjusted=True):.4f}, " +  f"MCC = {compute_score('mcc', y_holdout, predictions):.4f}."
+    print (other_scores)
     wandb.log({f'test_{args.scoring_method}': score})
+    wandb.log({f'test_bacc': bacc})
+    wandb.log({f'test_bacc_adjusted': bacc_adjusted})
+    wandb.log({f'test_mcc': mcc})
+
 
             
 if __name__ == '__main__':
