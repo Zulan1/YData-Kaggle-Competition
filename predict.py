@@ -55,7 +55,6 @@ def main():
         print(f"Loading data from {args.input_path}")
         
     df = df.fillna(df.mode().iloc[0])
-    df.drop(columns=cons.INDEX_COLUMNS, inplace=True)
     df = feature_engineering(df)
     ohe = get_ohe(args.input_path, run_id)
     df = transform_categorical_columns(df, ohe)
