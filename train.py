@@ -89,24 +89,24 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
         wandb.log({f'best {args.scoring_method}': best_score})
 
     def objective(trial):
-        model_types = ['XGBoost', 'LightGBM'] if args.model_type is None else [args.model_type]
+        model_types = ['XGBoost', 'LogisticRegression', 'RandomForest'] if args.model_type is None else [args.model_type]
         model_type = trial.suggest_categorical('model_type', model_types)
         match model_type:
-            # case 'LogisticRegression':
-            #     hparams = {
-            #         'C': trial.suggest_float('C', 1e-10, 1e10, log=True),
-            #         'class_weight': trial.suggest_categorical('class_weight_lr', ['balanced', None])
-            #     }
-            #     model = LogisticRegression()
-            # case 'RandomForest':
-            #     hparams = {
-            #         'n_estimators': trial.suggest_int('n_estimators', 10, 100),
-            #         'criterion': trial.suggest_categorical('criterion', ['gini', 'entropy']),
-            #         'max_depth': trial.suggest_int('max_depth', 1, 10),
-            #         'min_samples_split': trial.suggest_int('min_samples_split', 20, 100),
-            #         'class_weight': trial.suggest_categorical('class_weight_rf', ['balanced', 'balanced_subsample', None])
-            #     }
-            #     model = RandomForestClassifier()
+            case 'LogisticRegression':
+                hparams = {
+                    'C': trial.suggest_float('C', 1e-10, 1e10, log=True),
+                    # 'class_weight': trial.suggest_categorical('class_weight_lr', ['balanced', None])
+                }
+                model = LogisticRegression()
+            case 'RandomForest':
+                hparams = {
+                    'n_estimators': trial.suggest_int('n_estimators', 10, 100),
+                    'criterion': trial.suggest_categorical('criterion', ['gini', 'entropy']),
+                    'max_depth': trial.suggest_int('max_depth', 1, 10),
+                    'min_samples_split': trial.suggest_int('min_samples_split', 20, 100),
+                    'class_weight': trial.suggest_categorical('class_weight', ['balanced', 'balanced_subsample', None])
+                }
+                model = RandomForestClassifier()
             case 'SVM':
                 hparams = {
                     'C': trial.suggest_float('C', 1e-10, 1e10, log=True),
