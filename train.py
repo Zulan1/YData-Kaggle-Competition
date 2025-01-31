@@ -175,7 +175,7 @@ def main():
     # X_val.drop(columns=['DateTime', 'user_id', 'session_id'], inplace=True)
     # X_train = X_train[selected_columns]
     # X_val = X_val[selected_columns]
-    #X_train, y_train = SMOTE().fit_resample(X_train, y_train)
+    X_train, y_train = SMOTE().fit_resample(X_train, y_train)
 
     
 

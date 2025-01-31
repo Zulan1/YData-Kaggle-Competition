@@ -13,36 +13,22 @@ from app.argparser import get_preprocessing_args
 from app.helper_functions import encode_data, align_columns
 
 def one_hot_encode(df):
-    """
-    Encode categorical columns using OneHotEncoder
-    return the encoded DataFrame and the encoder
-    """
+    """Encode categorical columns using OneHotEncoder.
+    Returns the encoded DataFrame and the encoder."""
     ohe = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
-    
-    # Fit and transform categorical columns
     encoded_cats = ohe.fit_transform(df[cons.CATEGORICAL])
-    
-    # Get feature names after encoding
     feature_names = ohe.get_feature_names_out(cons.CATEGORICAL)
-    
-    # Create DataFrame with encoded values
     encoded_df = pd.DataFrame(encoded_cats, columns=feature_names, index=df.index)
-    
-    # Drop original categorical columns and join encoded ones
     df = df.drop(columns=cons.CATEGORICAL)
     df = pd.concat([df, encoded_df], axis=1)
-
     return df, ohe
 
 def save_ohe_to_file(ohe, path, verbose):
-    """
-    Save the OneHotEncoder to a file
-    """
+    """Save the OneHotEncoder to a file."""
     with open(path, 'wb') as f:
         pickle.dump(ohe, f)
     if verbose:
         print(f"OneHotEncoder saved to {path}")
-    
 
 def save_data_for_prediction(df: pd.DataFrame, path: str):
     df.to_csv(path, index=False)
@@ -75,7 +61,6 @@ def preprocess_towards_training(df):
     df = df.drop(columns=cons.INDEX_COLUMNS)
     return df, ohe
 
-
 def main():
     args = get_preprocessing_args()
     run_id = args.run_id
@@ -84,6 +69,7 @@ def main():
     train_mode = not args.test
     test_mode = args.test
     full_fn = args.input_path
+    
     log(f"Processing file: {full_fn}", args.verbose)
     df = pd.read_csv(full_fn)
     if df.empty:
@@ -99,6 +85,7 @@ def main():
         holdout_labels = pd.DataFrame(y_holdout, columns=[cons.TARGET_COLUMN]) 
         labels_path = os.path.join(output_path, cons.DEFAULT_LABELS_FILE)
         holdout_labels.to_csv(labels_path, index=False)
+        
         holdout_data = combine_Xy(X_holdout, y_holdout)
         internal_data = combine_Xy(X_internal, y_internal)
         processed_internal_data, ohe = preprocess_towards_training(internal_data)
@@ -110,8 +97,10 @@ def main():
         
         train = combine_Xy(X_train, y_train)
         val = combine_Xy(X_val, y_val)
+        
         if args.verbose:
             print(f"Saved preprocessed data to {output_path}")
+            
         X_holdout.to_csv(os.path.join(output_path, cons.DEFAULT_HOLDOUT_FILE), index=False)
         train.to_csv(os.path.join(output_path, cons.DEFAULT_TRAIN_SET_FILE), index=False)
         val.to_csv(os.path.join(output_path, cons.DEFAULT_VAL_SET_FILE), index=False)
@@ -122,11 +111,6 @@ def main():
         output_path = os.path.join(output_path, cons.DEFAULT_PROCESSED_TEST_FILE)
         df.to_csv(output_path, index=False)
         log(f"Test set saved to {output_path}.", args.verbose)
-
-    
-
-
-
 
 if __name__ == '__main__':
     main()
