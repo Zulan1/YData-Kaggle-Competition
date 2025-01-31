@@ -99,20 +99,22 @@ def main():
         holdout_labels = pd.DataFrame(y_holdout, columns=[cons.TARGET_COLUMN]) 
         labels_path = os.path.join(output_path, cons.DEFAULT_LABELS_FILE)
         holdout_labels.to_csv(labels_path, index=False)
-        holdout_data = pd.concat([X_holdout, y_holdout], axis=1)
-        internal_data = pd.concat([X_internal, y_internal], axis=1)
+        holdout_data = combine_Xy(X_holdout, y_holdout)
+        internal_data = combine_Xy(X_internal, y_internal)
         processed_internal_data, ohe = preprocess_towards_training(internal_data)
+        X_internal, y_internal = split_dataset_Xy(processed_internal_data)
         save_ohe_to_file(ohe, f"{output_path}/ohe.pkl", args.verbose)
 
         X_train, X_val, y_train, y_val = train_test_split(
-            processed_internal_data, y_internal, test_size=cons.VAL_TEST_SPLIT, stratify=y_internal, random_state=cons.RANDOM_STATE)
+            X_internal, y_internal, test_size=cons.VAL_TEST_SPLIT, stratify=y_internal, random_state=cons.RANDOM_STATE)
         
-        train = pd.concat([X_train, y_train], axis=1)
-        val = pd.concat([X_val, y_val], axis=1)
-        save_data_for_training(train, val, output_path)
+        train = combine_Xy(X_train, y_train)
+        val = combine_Xy(X_val, y_val)
         if args.verbose:
             print(f"Saved preprocessed data to {output_path}")
         X_holdout.to_csv(os.path.join(output_path, cons.DEFAULT_HOLDOUT_FILE), index=False)
+        train.to_csv(os.path.join(output_path, cons.DEFAULT_TRAIN_SET_FILE), index=False)
+        val.to_csv(os.path.join(output_path, cons.DEFAULT_VAL_SET_FILE), index=False)
     
     if test_mode:
         df.drop(columns=cons.COLUMNS_TO_DROP, inplace=True)
@@ -123,21 +125,6 @@ def main():
 
     
 
-
-
-
-        
-        
-        
-        
-
-
-
-    
-
-    
-    
-    
 
 
 

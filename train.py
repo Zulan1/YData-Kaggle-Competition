@@ -7,6 +7,7 @@ import xgboost as xgb
 import lightgbm as lgb
 import constants as cons
 
+import pandas as pd
 
 
 from imblearn.over_sampling import SMOTE
@@ -156,10 +157,17 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
 def main():
     args = get_train_args()
 
-    df_train, df_val, df_test = load_training_data(run_id=args.run_id)
+    input_path = args.input_path
+    run_id = args.run_id
+    
+    train_path = os.path.join(input_path, f'preprocess_{run_id}', cons.DEFAULT_TRAIN_SET_FILE)
+    val_path = os.path.join(input_path, f'preprocess_{run_id}', cons.DEFAULT_VAL_SET_FILE)
+    df_train = pd.read_csv(train_path)
+    print(df_train.columns)
+    df_val = pd.read_csv(val_path)
+
     X_train, y_train = split_dataset_Xy(df_train)
     X_val, y_val = split_dataset_Xy(df_val)
-    X_test, y_test = split_dataset_Xy(df_test)
     # selected_columns = cons.DEMOGRAPHICS
     # selected_columns = [col for col in X_train.columns if any(c in col for c in selected_columns)]
 
@@ -167,7 +175,8 @@ def main():
     # X_val.drop(columns=['DateTime', 'user_id', 'session_id'], inplace=True)
     # X_train = X_train[selected_columns]
     # X_val = X_val[selected_columns]
-    X_train, y_train = SMOTE().fit_resample(X_train, y_train)
+    #X_train, y_train = SMOTE().fit_resample(X_train, y_train)
+
     
 
     dmy_cls = DummyClassifier(strategy='most_frequent')
@@ -196,11 +205,11 @@ def main():
     with open(f'{output_path}/model.pkl', 'wb') as p:
         pickle.dump(model, p)
     
-    predictions = model.predict(X_test)
-    score = compute_score(args.scoring_method, y_test, predictions)
-    print(confusion_matrix(y_test, predictions))
-    print(f"Final Test Model score {args.scoring_method}: {score}")
-    wandb.log({f'test_{args.scoring_method}': score})
+    # predictions = model.predict(X_test)
+    # score = compute_score(args.scoring_method, y_test, predictions)
+    # print(confusion_matrix(y_test, predictions))
+    # print(f"Final Test Model score {args.scoring_method}: {score}")
+    # wandb.log({f'test_{args.scoring_method}': score})
 
             
 if __name__ == '__main__':

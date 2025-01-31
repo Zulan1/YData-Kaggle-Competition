@@ -52,7 +52,7 @@ def pipeline(c):
     """
     run_id = get_timestamp_str()
     c.run(f"python preprocess.py --run-id={run_id} --output-path=./data/ --input-path=./data/train_dataset_full.csv --verbose")
-    c.run(f"python train.py --optuna-search --n-trials=3 --run-id={run_id} --output-path=./data/")
+    c.run(f"python train.py --input-path=./data/ --optuna-search --n-trials=3 --run-id={run_id} --output-path=./data/")
     c.run(f"python preprocess.py --test --run-id={run_id} --input-path=./data/preprocess_{run_id}/holdout.csv --output-path=./data/ --verbose")
     c.run(f"python predict.py --run-id={run_id} --output-path=./data/ --input-path=./data/ --verbose")
     c.run(f"python result.py --run-id={run_id} --output-path=./data/ --input-path=./data/ --error-analysis")
@@ -68,7 +68,7 @@ def external_pipeline(c):
     """
     run_id = get_timestamp_str()
     c.run(f"python preprocess.py --run-id={run_id} --input-path=./data/train_dataset_full.csv --output-path=./data/ --verbose")
-    c.run(f"python train.py --optuna-search --n-trials=1 --run-id={run_id} --output-path=./data/")
+    c.run(f"python train.py --input-path=./data/ --optuna-search --n-trials=1 --run-id={run_id} --output-path=./data/")
     c.run(f"python preprocess.py --test --run-id={run_id} --input-path=./data/X_test_1st_raw.csv --output-path=./data/ --verbose")
     c.run(f"python predict.py --run-id={run_id} --output-path=./data/ --input-path=./data/ --verbose")
     c.run(f"python result.py --run-id={run_id} --output-path=./data/ --input-path=./data/")

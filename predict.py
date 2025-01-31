@@ -61,6 +61,8 @@ def main():
 
     if args.verbose:
         print(f"Predicting {cons.TARGET_COLUMN} for {args.input_path}")
+    
+    print(df.columns)
 
     predictions = model.predict(df)
     predictions = pd.DataFrame(predictions, index=df.index, columns=[cons.TARGET_COLUMN])
