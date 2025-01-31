@@ -156,7 +156,7 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
 def main():
     args = get_train_args()
 
-    df_train, df_val, df_test = load_training_data()
+    df_train, df_val, df_test = load_training_data(run_id=args.run_id)
     X_train, y_train = split_dataset_Xy(df_train)
     X_val, y_val = split_dataset_Xy(df_val)
     X_test, y_test = split_dataset_Xy(df_test)
