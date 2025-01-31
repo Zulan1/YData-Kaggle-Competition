@@ -72,6 +72,7 @@ def preprocess_towards_training(df):
     df = df.drop(columns=cons.COLUMNS_TO_DROP)
     df = feature_engineering(df)
     df, ohe = one_hot_encode(df)
+    df = df.drop(columns=cons.INDEX_COLUMNS)
     return df, ohe
 
 
@@ -115,6 +116,7 @@ def main():
     
     if test_mode:
         df.drop(columns=cons.COLUMNS_TO_DROP, inplace=True)
+        df.drop(columns=cons.INDEX_COLUMNS, inplace=True)
         output_path = os.path.join(output_path, cons.DEFAULT_PROCESSED_TEST_FILE)
         df.to_csv(output_path, index=False)
         log(f"Test set saved to {output_path}.", args.verbose)
