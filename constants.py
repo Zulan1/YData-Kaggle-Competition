@@ -7,6 +7,8 @@ DEFAULT_ONE_HOT_ENCODER_FILE = 'ohe.pkl'
 DEFAULT_TRAIN_SET_FILE = 'train.csv'
 DEFAULT_VAL_SET_FILE = 'val.csv'
 DEFAULT_TEST_SET_FILE = 'test.csv'
+DEFAULT_LABELS_FILE = 'labels.csv'
+DEFAULT_HOLDOUT_FILE = 'holdout.csv'
 
 DEFAULT_PROCESSED_TEST_FILE = 'processed_test.csv'
 

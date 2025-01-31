@@ -193,18 +193,17 @@ def encode_data(train: pd.DataFrame, val: pd.DataFrame, test: pd.DataFrame, cate
     return train_encoded, val_encoded, test_encoded
 
 
-def save_data_for_training(train, val, test, path):
+def save_data_for_training(train, val, path):
     """Save train, validation, and test sets to CSV files."""
     train.to_csv(f'{path}/{cons.DEFAULT_TRAIN_SET_FILE}', index=False)
     val.to_csv(f'{path}/{cons.DEFAULT_VAL_SET_FILE}', index=False)
-    test.to_csv(f'{path}/{cons.DEFAULT_TEST_SET_FILE}', index=False)
 
 
 def load_training_data(path: str = cons.DATA_PATH, 
                        train_fn: str = cons.DEFAULT_TRAIN_SET_FILE, 
                        val_fn: str = cons.DEFAULT_VAL_SET_FILE, 
-                       test_fn: str = cons.DEFAULT_TEST_SET_FILE
-                       ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+                       holdout_fn: str = cons.DEFAULT_HOLDOUT_FILE,
+                       run_id: str = None) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Load the train, validation, and test sets from CSV files.
 
@@ -218,10 +217,16 @@ def load_training_data(path: str = cons.DATA_PATH,
         Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: The training, validation, and test sets as DataFrames.
     """
     # Load train, validation, and test sets
-    train = pd.read_csv(f'{path}/{cons.DEFAULT_TRAIN_SET_FILE}')
-    val = pd.read_csv(f'{path}/{cons.DEFAULT_VAL_SET_FILE}')
-    test = pd.read_csv(f'{path}/{cons.DEFAULT_TEST_SET_FILE}') 
-    return train, val, test
+
+    if run_id is None:
+        prefix = ""
+    else:
+        prefix = f"preprocess_{run_id}/"
+
+    train = pd.read_csv(f'{path}{prefix + cons.DEFAULT_TRAIN_SET_FILE}')
+    val = pd.read_csv(f'{path}{prefix + cons.DEFAULT_VAL_SET_FILE}')
+    holdout = pd.read_csv(f'{path}{prefix + cons.DEFAULT_HOLDOUT_FILE}') 
+    return train, val, holdout
 
 
 def log(message: str, verbose: bool) -> None:
