@@ -11,7 +11,7 @@ def compute_score(option, y_true, y_pred) -> float:
     """
     # Calculate the specified metric
     if option == 'f1':
-        test_score = f1_score(y_true, y_pred, average='weighted')
+        test_score = f1_score(y_true, y_pred)
     elif option == 'mcc':
         test_score = matthews_corrcoef(y_true, y_pred)
     elif option == 'bacc':
