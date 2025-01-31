@@ -44,4 +44,5 @@ def get_result_args():
     parser.add_argument('--output-path', type=str, required=True, help='Path to results file')
     parser.add_argument('--verbose', action='store_true', help='Print additional information')
     parser.add_argument('--run-id', type=str, help='Run ID')
+    parser.add_argument('--error-analysis', action='store_true', help='Analyze test set')
     return parser.parse_args()

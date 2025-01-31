@@ -2,10 +2,9 @@ from invoke import task
 from app.time_utils import get_timestamp_str
 
 
-
-
 @task
 def preprocess(c, test=False):
+    """Preprocess raw data into train/test splits"""
     run_id = get_timestamp_str()
     print("Running raw data preprocess step...")
     cmd = f"python preprocess.py --input-path=./data/train_dataset_full.csv --output-path=./data/ --verbose --run-id={run_id}"
@@ -13,33 +12,62 @@ def preprocess(c, test=False):
         cmd += " --test"
     c.run(cmd)
 
-          
-@task
+
+@task 
 def train(c):
+    """Train model on preprocessed data"""
     run_id = get_timestamp_str()
     print("Running training step...")
     c.run(f"python train.py --model-type=LogisticRegression --C 0.5 --run-id={run_id} --output-path=./data/")
-    # Add invoke logic for training
+
+
 @task
 def predict(c):
+    """Generate predictions on test data"""
     run_id = get_timestamp_str()
     print("Running prediction step...")
     c.run(f'python predict.py --input-path data/test_dataset.csv --out-path data/ --run-id={run_id}')
-    # Add invoke logic for prediction
+
+
 @task
 def analyze(c):
+    """Analyze model results"""
     print("Running analysis step...")
-    # Add invoke logic for result analysis
+
+
 @task
 def echo(c, name):
+    """Simple echo task for testing"""
     print(f"Hello, {name}!")
+
+
 @task
 def pipeline(c):
+    """Run full training pipeline:
+    1. Preprocess training data
+    2. Train model with hyperparameter search
+    3. Preprocess holdout data
+    4. Generate predictions
+    5. Analyze results
+    """
     run_id = get_timestamp_str()
     c.run(f"python preprocess.py --run-id={run_id} --output-path=./data/ --input-path=./data/train_dataset_full.csv --verbose")
-    c.run(f"python train.py --model-type=LogisticRegression --C 0.5 --run-id={run_id} --output-path=./data/")
+    c.run(f"python train.py --optuna-search --n-trials=3 --run-id={run_id} --output-path=./data/")
+    c.run(f"python preprocess.py --test --run-id={run_id} --input-path=./data/preprocess_{run_id}/holdout.csv --output-path=./data/ --verbose")
+    c.run(f"python predict.py --run-id={run_id} --output-path=./data/ --input-path=./data/ --verbose")
+    c.run(f"python result.py --run-id={run_id} --output-path=./data/ --input-path=./data/ --error-analysis")
+
+
+@task
+def external_pipeline(c):
+    """Run pipeline on external test data:
+    1. Preprocess test data
+    2. Generate predictions
+    3. Preprocess additional test data
+    4. Analyze results
+    """
+    run_id = get_timestamp_str()
     c.run(f"python preprocess.py --test --run-id={run_id} --input-path=./data/train_dataset_full.csv --output-path=./data/ --verbose")
     c.run(f"python predict.py --run-id={run_id} --output-path=./data/ --input-path=./data/ --verbose")
+    c.run(f"python preprocess.py --test --run-id={run_id} --input-path=./data/X_test_1st.csv --output-path=./data/ --verbose")
     c.run(f"python result.py --run-id={run_id} --output-path=./data/ --input-path=./data/")
-    
- 

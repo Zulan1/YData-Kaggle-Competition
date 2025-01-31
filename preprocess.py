@@ -68,6 +68,12 @@ def extract_time_features(df: pd.DataFrame, datetime_column: str) -> pd.DataFram
     df['day_of_week'] = df[datetime_column].dt.dayofweek
     return df.drop(columns=['hour', 'DateTime'])
 
+def preprocess_towards_training(df):
+    df = df.drop(columns=cons.COLUMNS_TO_DROP)
+    df = feature_engineering(df)
+    df, ohe = one_hot_encode(df)
+    return df, ohe
+
 
 def main():
     args = get_preprocessing_args()
@@ -81,58 +87,57 @@ def main():
     df = pd.read_csv(full_fn)
     if df.empty:
         raise ValueError("The input file is empty.")
-    
-    ## 1. Drop unwanted columns
-
-    df = df.drop(columns=cons.COLUMNS_TO_DROP)
 
     if train_mode:
-        df = df.dropna()
         df = df.drop_duplicates()
-        df = feature_engineering(df)
-        df, ohe = one_hot_encode(df)
+        df = df.dropna(subset=[col for col in df.columns if col not in cons.COLUMNS_TO_DROP])
+        X, y = split_dataset_Xy(df)
+        X_internal, X_holdout, y_internal, y_holdout = train_test_split(
+            X, y, test_size=cons.TRAIN_TEST_SPLIT, stratify=y, random_state=cons.RANDOM_STATE)
+        
+        holdout_labels = pd.DataFrame(y_holdout, columns=[cons.TARGET_COLUMN]) 
+        labels_path = os.path.join(output_path, cons.DEFAULT_LABELS_FILE)
+        holdout_labels.to_csv(labels_path, index=False)
+        holdout_data = pd.concat([X_holdout, y_holdout], axis=1)
+        internal_data = pd.concat([X_internal, y_internal], axis=1)
+        processed_internal_data, ohe = preprocess_towards_training(internal_data)
         save_ohe_to_file(ohe, f"{output_path}/ohe.pkl", args.verbose)
 
-        X, y = split_dataset_Xy(df)
-
-        # First split: Train and Temp (for validation + test)
-        X_train, X_temp, y_train, y_temp = train_test_split(
-            X, y, test_size=cons.TRAIN_TEST_SPLIT, stratify=y, random_state=cons.RANDOM_STATE)
-
-        # Second split: Temp -> Validation and Test
-        X_val, X_test, y_val, y_test = train_test_split(
-            X_temp, y_temp, test_size=cons.VAL_TEST_SPLIT, stratify=y_temp, random_state=cons.RANDOM_STATE)
-
-        # Combine X and y back into DataFrames for train, validation, and test
-        train = combine_Xy(X_train, y_train)
-        val = combine_Xy(X_val, y_val)
-        test = combine_Xy(X_test, y_test)
-
-        # 6. Multi-Level Index for Traceability
-        try:
-            train.set_index(cons.INDEX_COLUMNS, inplace=True, drop=True)
-            val.set_index(cons.INDEX_COLUMNS, inplace=True, drop=True)
-            test.set_index(cons.INDEX_COLUMNS, inplace=True, drop=True)
-        except KeyError as e:
-            raise KeyError(f"Ensure all index columns {cons.INDEX_COLUMNS} exist in the dataset. Missing columns: {e}")
-
-        # 7. Align Indices of y Sets to Match X Sets
-        y_train = pd.Series(y_train.values, index=train.index, name=cons.TARGET_COLUMN)
-        y_val = pd.Series(y_val.values, index=val.index, name=cons.TARGET_COLUMN)
-        y_test = pd.Series(y_test.values, index=test.index, name=cons.TARGET_COLUMN)
-
-        log(f"Training set created with {len(train)} samples.", args.verbose)
-        log(f"Validation set created with {len(val)} samples.", args.verbose)
-        log(f"Test set created with {len(test)} samples.", args.verbose)
-
-        # 8. Save the datasets using the helper function
-        save_data_for_training(train, val, test, output_path)
-
+        X_train, X_val, y_train, y_val = train_test_split(
+            processed_internal_data, y_internal, test_size=cons.VAL_TEST_SPLIT, stratify=y_internal, random_state=cons.RANDOM_STATE)
+        
+        train = pd.concat([X_train, y_train], axis=1)
+        val = pd.concat([X_val, y_val], axis=1)
+        save_data_for_training(train, val, output_path)
+        if args.verbose:
+            print(f"Saved preprocessed data to {output_path}")
+        X_holdout.to_csv(os.path.join(output_path, cons.DEFAULT_HOLDOUT_FILE), index=False)
+    
     if test_mode:
-        df.drop(columns=cons.TARGET_COLUMN, inplace=True)
+        df.drop(columns=cons.COLUMNS_TO_DROP, inplace=True)
         output_path = os.path.join(output_path, cons.DEFAULT_PROCESSED_TEST_FILE)
         df.to_csv(output_path, index=False)
         log(f"Test set saved to {output_path}.", args.verbose)
+
+    
+
+
+
+
+        
+        
+        
+        
+
+
+
+    
+
+    
+    
+    
+
+
 
 if __name__ == '__main__':
     main()
