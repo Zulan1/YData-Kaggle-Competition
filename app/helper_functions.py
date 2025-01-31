@@ -193,11 +193,10 @@ def encode_data(train: pd.DataFrame, val: pd.DataFrame, test: pd.DataFrame, cate
     return train_encoded, val_encoded, test_encoded
 
 
-def save_data_for_training(train, val, test, path):
+def save_data_for_training(train, val, path):
     """Save train, validation, and test sets to CSV files."""
     train.to_csv(f'{path}/{cons.DEFAULT_TRAIN_SET_FILE}', index=False)
     val.to_csv(f'{path}/{cons.DEFAULT_VAL_SET_FILE}', index=False)
-    test.to_csv(f'{path}/{cons.DEFAULT_TEST_SET_FILE}', index=False)
 
 
 def load_training_data(path: str = cons.DATA_PATH, 
