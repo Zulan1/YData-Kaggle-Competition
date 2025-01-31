@@ -4,6 +4,7 @@ import constants as cons
 #define training arguments
 def get_train_args():
     parser = argparse.ArgumentParser(description='Train a model')
+    parser.add_argument('--input-path', type=str, required=True, help='Path to input data for training')
     parser.add_argument('--optuna-search', action='store_true', help='Whether to perform hyperparameter search')
     parser.add_argument('--n-trials', type=int, default=100, help='number of trials for hyperparameter search')
     parser.add_argument('--scoring-method', type=str, default='f1', help='The metric to use for evaluation')
