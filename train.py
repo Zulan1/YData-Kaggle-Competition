@@ -21,7 +21,7 @@ from sklearn.datasets import load_diabetes
 
 from app.metrics import compute_score
 from app.argparser import get_train_args
-from app.helper_functions import load_training_data, split_dataset_Xy
+from app.helper_functions import split_dataset_Xy
 
 models = {
     'LogisticRegression': LogisticRegression(),
@@ -48,6 +48,9 @@ def get_model(args, X_train, y_train, X_val, y_val):
             model = RandomForestClassifier(
                 n_estimators=args.n_estimators,
                 criterion=args.criterion,
+                max_depth=args.max_depth,
+                min_samples_split=args.min_samples_split,
+                class_weight=args.class_weight,
                 )
         case 'SVM':
             model = SVC(
@@ -163,7 +166,6 @@ def main():
     train_path = os.path.join(input_path, f'preprocess_{run_id}', cons.DEFAULT_TRAIN_SET_FILE)
     val_path = os.path.join(input_path, f'preprocess_{run_id}', cons.DEFAULT_VAL_SET_FILE)
     df_train = pd.read_csv(train_path)
-    print(df_train.columns)
     df_val = pd.read_csv(val_path)
 
     X_train, y_train = split_dataset_Xy(df_train)

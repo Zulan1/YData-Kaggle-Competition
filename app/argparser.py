@@ -14,6 +14,9 @@ def get_train_args():
 
     parser.add_argument('--n-estimators', type=int, default=None, help='The number of estimators for Random Forest')
     parser.add_argument('--criterion', type=str, default=None, help='The criterion for Random Forest')
+    parser.add_argument('--max-depth', type=int, default=None, help='The maximum depth for Random Forest')
+    parser.add_argument('--min-samples-split', type=int, default=None, help='The minimum number of samples required to split an internal node for Random Forest')
+    parser.add_argument('--class-weight', type=str, default=None, help='The class weight for Random Forest')
 
     parser.add_argument('--kernel', type=str, default=None, help='The kernel for SVM')
     parser.add_argument('--run-id', type=str, help='Run ID')

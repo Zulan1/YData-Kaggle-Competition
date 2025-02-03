@@ -100,43 +100,56 @@ def feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
     df = extract_time_features(df, cons.DATETIME_COLUMN)
     return df
 
-def process_datetime(df: pd.DataFrame, datetime_column: str) -> pd.DataFrame:
-    """Convert DateTime column to a proper datetime object and validate entries."""
-    df[datetime_column] = pd.to_datetime(df[datetime_column], errors="coerce")
-    if df[datetime_column].isna().any():
-        raise ValueError("Invalid DateTime entries found during preprocessing.")
-    return df
-
-def extract_time_features(df: pd.DataFrame, datetime_column: str) -> pd.DataFrame:
-    """Extract hour, hour_sin, hour_cos, and day_of_week from the DateTime column."""
-    df['hour'] = df[datetime_column].dt.hour
-    df['hour_sin'] = np.sin(2 * np.pi * df['hour'] / 24)
-    df['hour_cos'] = np.cos(2 * np.pi * df['hour'] / 24)
-    df['day_of_week'] = df[datetime_column].dt.dayofweek
-    return df.drop(columns=['hour'])
-
-def clean_data(df: pd.DataFrame, columns_to_drop: list, datetime_column: str) -> pd.DataFrame:
-    """Pipeline to clean the data by calling modular functions."""
-    df = remove_duplicates(df)
-    df = drop_high_missing_columns(df, columns_to_drop)
-    df = drop_missing_values(df)
-    df = process_datetime(df, datetime_column)
-    df = extract_time_features(df, datetime_column)
-    return df
-        
-def split_dataset_Xy(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    Split the dataset into features and target as DataFrames.
+def process_datetime(df: pd.DataFrame, datetime_column: str = cons.DATETIME_COLUMN) -> pd.DataFrame:
+    """Convert DateTime column to a proper datetime object and validate entries.
     
     Args:
-        df (pd.DataFrame): The DataFrame containing the dataset.
-
+        df: Input DataFrame
+        datetime_column: Name of datetime column
+        
     Returns:
-        Tuple[pd.DataFrame, pd.DataFrame]: The DataFrame containing the features and the DataFrame containing the target.
+        DataFrame with processed datetime column
     """
-    X = df.drop(columns=cons.TARGET_COLUMN)  # Drop only the target column(s) for features
-    y = df[cons.TARGET_COLUMN]  # Extract the target as a DataFrame
-    X, y = X.align(y, axis=0)  # Align indices of X and y
+    if datetime_column not in df.columns:
+        return df
+        
+    df[datetime_column] = pd.to_datetime(df[datetime_column], errors="coerce")
+    # Drop rows where datetime conversion failed
+    return df
+
+def extract_time_features(df: pd.DataFrame, datetime_column: str = cons.DATETIME_COLUMN) -> pd.DataFrame:
+    """Extract time-based features from datetime column.
+    
+    Args:
+        df: Input DataFrame
+        datetime_column: Name of datetime column
+        
+    Returns:
+        DataFrame with additional time features
+    """
+    if datetime_column not in df.columns:
+        return df
+        
+    if not pd.api.types.is_datetime64_any_dtype(df[datetime_column]):
+        df = process_datetime(df, datetime_column)
+        
+    hour = df[datetime_column].dt.hour
+    df['hour_sin'] = np.sin(2 * np.pi * hour / 24)
+    df['hour_cos'] = np.cos(2 * np.pi * hour / 24)
+    df['day_of_week'] = df[datetime_column].dt.dayofweek
+    return df
+
+def clean_data(df: pd.DataFrame) -> pd.DataFrame:
+    """Clean data by removing duplicates and NA values."""
+    df = df.dropna()
+    df = df.drop_duplicates()
+    return df
+
+def split_dataset_Xy(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """Split dataset into features (X) and target (y)."""
+    X = df.drop(columns=cons.TARGET_COLUMN)
+    y = df[cons.TARGET_COLUMN]
+    X, y = X.align(y, axis=0)
     return X, y
 
 def combine_Xy(X: pd.DataFrame, y : pd.DataFrame) -> pd.DataFrame:
@@ -199,36 +212,37 @@ def save_data_for_training(train, val, path):
     val.to_csv(f'{path}/{cons.DEFAULT_VAL_SET_FILE}', index=False)
 
 
-def load_training_data(path: str = cons.DATA_PATH, 
-                       train_fn: str = cons.DEFAULT_TRAIN_SET_FILE, 
-                       val_fn: str = cons.DEFAULT_VAL_SET_FILE, 
-                       holdout_fn: str = cons.DEFAULT_HOLDOUT_FILE,
-                       run_id: str = None) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    """
-    Load the train, validation, and test sets from CSV files.
+# def load_training_data(path: str = cons.DATA_PATH, 
+#                        train_fn: str = cons.DEFAULT_TRAIN_SET_FILE, 
+#                        val_fn: str = cons.DEFAULT_VAL_SET_FILE, 
+#                        holdout_fn: str = cons.DEFAULT_HOLDOUT_FILE,
+#                        run_id: str = None) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+#     """
+#     Load the train, validation, and test sets from CSV files.
+# 
+#     Args:
+#         path (str):     The path to load the CSV files. Default is 'data/'.    
+#         train_fn (str): The filename for the training set. Default is 'train.csv'.
+#         val_fn (str):   The filename for the validation set. Default is 'val.csv'.
+#         test_fn (str):  The filename for the test set. Default is 'test.csv'.
+# 
+#     Returns:
+#         Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: The training, validation, and test sets as DataFrames.
+#     """
+#     # Load train, validation, and test sets
+# 
+#     if run_id is None:
+#         prefix = ""
+#     else:
+#         prefix = f"preprocess_{run_id}/"
+# 
+#     train = pd.read_csv(f'{path}{prefix + cons.DEFAULT_TRAIN_SET_FILE}')
+#     val = pd.read_csv(f'{path}{prefix + cons.DEFAULT_VAL_SET_FILE}')
+#     holdout = pd.read_csv(f'{path}{prefix + cons.DEFAULT_HOLDOUT_FILE}') 
+#     return train, val, holdout
 
-    Args:
-        path (str):     The path to load the CSV files. Default is 'data/'.    
-        train_fn (str): The filename for the training set. Default is 'train.csv'.
-        val_fn (str):   The filename for the validation set. Default is 'val.csv'.
-        test_fn (str):  The filename for the test set. Default is 'test.csv'.
 
-    Returns:
-        Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: The training, validation, and test sets as DataFrames.
-    """
-    # Load train, validation, and test sets
-
-    if run_id is None:
-        prefix = ""
-    else:
-        prefix = f"preprocess_{run_id}/"
-
-    train = pd.read_csv(f'{path}{prefix + cons.DEFAULT_TRAIN_SET_FILE}')
-    val = pd.read_csv(f'{path}{prefix + cons.DEFAULT_VAL_SET_FILE}')
-    holdout = pd.read_csv(f'{path}{prefix + cons.DEFAULT_HOLDOUT_FILE}') 
-    return train, val, holdout
-
-
-def log(message: str, verbose: bool) -> None:
+def log(message: str, verbose: bool, level: str = "INFO") -> None:
+    """Log a message if verbose is True."""
     if verbose:
-        print(message)
+        print(f"{datetime.now().isoformat()} [{level}] {message}")
