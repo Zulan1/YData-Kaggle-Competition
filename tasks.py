@@ -63,8 +63,12 @@ def pipeline(c):
     run_id = get_timestamp_str()
     c.run(f"python preprocess.py --run-id={run_id} --output-path=./data/ --input-path=./data/train_dataset_full.csv --verbose")
     c.run(
-        f"python train.py --optuna-search "
-        f"--n-trials=50 "
+        f"python train.py --model-type=RandomForest "
+        f"--n-estimators=40 "
+        f"--criterion=gini "
+        f"--max-depth=10 "
+        f"--min-samples-split=57 "
+        f"--class-weight=balanced_subsample "
         f"--run-id={run_id} "
         f"--output-path=./data/ "
         f"--input-path=./data/"
