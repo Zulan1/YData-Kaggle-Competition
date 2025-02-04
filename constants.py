@@ -34,4 +34,4 @@ RANDOM_STATE = 42
 #TRAIN_TEST_SPLIT = 0.4  # Temp = 40% for validation + test
 #VAL_TEST_SPLIT = 0.5    # Split Temp equally into validation and test
 
-TRAIN_TEST_VAL_SPLIT = (0.2, 0.2, 0.6)
+TRAIN_TEST_VAL_SPLIT = (0.6, 0.2, 0.2)
