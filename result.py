@@ -11,7 +11,7 @@ def main():
     predictions_path = os.path.join(args.input_path, f"predict_{run_id}/{cons.DEFAULT_PREDICTIONS_FILE}")
     predictions = pd.read_csv(predictions_path)
 
-    default_internal_test_file = os.path.join(args.input_path, f"preprocess_{run_id}/{cons.DEFAULT_PROCESSED_TEST_FILE}")
+    default_internal_test_file = os.path.join(args.input_path, f"preprocess_{run_id}/{cons.DEFAULT_TEST_SET_FILE}")
     features = pd.read_csv(default_internal_test_file)
 
     df = pd.concat([features, predictions], axis=1)
@@ -23,7 +23,7 @@ def main():
     if args.verbose:
         print(f"Results saved to {file_path}")
     if args.error_analysis:
-        labels = pd.read_csv(os.path.join(args.input_path, f"preprocess_{run_id}/{cons.DEFAULT_LABELS_FILE}"))
+        labels = pd.read_csv(os.path.join(args.input_path, f"preprocess_{run_id}/{cons.DEFAULT_HOLDOUT_LABELS_FILE}"))
         print("F1 score: ", f1_score(labels, predictions))
         print("Confusion matrix: ", confusion_matrix(labels, predictions))
         print("Classification report: ", classification_report(labels, predictions))

@@ -12,7 +12,7 @@ def get_model(input_path: str, run_id: str):
     return pickle.load(open(model_path, 'rb'))
 
 def get_data(input_path: str, run_id: str) -> pd.DataFrame:
-    data_path = os.path.join(input_path, f"preprocess_{run_id}/{cons.DEFAULT_PROCESSED_TEST_FILE}")
+    data_path = os.path.join(input_path, f"preprocess_{run_id}/{cons.DEFAULT_TEST_SET_FILE}")
     return pd.read_csv(data_path)
 
 def transform_categorical_columns(df: pd.DataFrame, ohe: OneHotEncoder) -> pd.DataFrame:
@@ -31,9 +31,6 @@ def transform_categorical_columns(df: pd.DataFrame, ohe: OneHotEncoder) -> pd.Da
     df = df.drop(columns=cons.CATEGORICAL)
     return pd.concat([df, encoded_df], axis=1)
 
-def get_ohe(input_path: str, run_id: str) -> OneHotEncoder:
-    ohe_path = os.path.join(input_path, f"preprocess_{run_id}/ohe.pkl")
-    return pickle.load(open(ohe_path, 'rb'))
 
 def main():
     args = get_predict_args()
@@ -48,11 +45,6 @@ def main():
         print(f"Loading data from {args.input_path}")
     
     df = get_data(args.input_path, run_id)
-    df = df.fillna(df.mode().iloc[0])
-    df = feature_engineering(df)
-    
-    ohe = get_ohe(args.input_path, run_id)
-    df = transform_categorical_columns(df, ohe)
 
     if args.verbose:
         print(f"Predicting {cons.TARGET_COLUMN} for {args.input_path}")

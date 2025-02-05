@@ -15,10 +15,20 @@ def preprocess(c, test=False):
 
 @task 
 def train(c):
-    """Train model on preprocessed data"""
+    """Train model on preprocessed data using RandomForest with default hyperparameters"""
     run_id = get_timestamp_str()
     print("Running training step...")
-    c.run(f"python train.py --model-type=LogisticRegression --C 0.5 --run-id={run_id} --output-path=./data/")
+    c.run(
+        f"python train.py --model-type=RandomForest "
+        f"--n-estimators=40 "
+        f"--criterion=gini "
+        f"--max-depth=10 "
+        f"--min-samples-split=57 "
+        f"--class-weight=balanced_subsample "
+        f"--run-id={run_id} "
+        f"--output-path=./data/ "
+        f"--input-path=./data/"
+    )
 
 
 @task
@@ -26,7 +36,7 @@ def predict(c):
     """Generate predictions on test data"""
     run_id = get_timestamp_str()
     print("Running prediction step...")
-    c.run(f'python predict.py --input-path data/test_dataset.csv --out-path data/ --run-id={run_id}')
+    c.run(f"python predict.py --input-path data/test_dataset.csv --output-path data/ --run-id={run_id}")
 
 
 @task
@@ -45,15 +55,25 @@ def echo(c, name):
 def pipeline(c):
     """Run full training pipeline:
     1. Preprocess training data
-    2. Train model with hyperparameter search
+    2. Train model with RandomForest defaults
     3. Preprocess holdout data
     4. Generate predictions
     5. Analyze results
     """
     run_id = get_timestamp_str()
     c.run(f"python preprocess.py --run-id={run_id} --output-path=./data/ --input-path=./data/train_dataset_full.csv --verbose")
-    c.run(f"python train.py --input-path=./data/ --optuna-search --n-trials=100 --run-id={run_id} --output-path=./data/")
-    c.run(f"python preprocess.py --test --run-id={run_id} --input-path=./data/preprocess_{run_id}/holdout.csv --output-path=./data/ --verbose")
+    c.run(
+        f"python train.py --model-type=RandomForest "
+        f"--n-estimators=40 "
+        f"--criterion=gini "
+        f"--max-depth=10 "
+        f"--min-samples-split=57 "
+        f"--class-weight=balanced_subsample "
+        f"--run-id={run_id} "
+        f"--output-path=./data/ "
+        f"--input-path=./data/"
+    )
+    c.run(f"python preprocess.py --test --run-id={run_id} --input-path=./data/preprocess_{run_id}/holdout_features.csv --output-path=./data/ --verbose")
     c.run(f"python predict.py --run-id={run_id} --output-path=./data/ --input-path=./data/ --verbose")
     c.run(f"python result.py --run-id={run_id} --output-path=./data/ --input-path=./data/ --error-analysis")
 
@@ -68,7 +88,17 @@ def external_pipeline(c):
     """
     run_id = get_timestamp_str()
     c.run(f"python preprocess.py --run-id={run_id} --input-path=./data/train_dataset_full.csv --output-path=./data/ --verbose")
-    c.run(f"python train.py --optuna-seach -n-trials=100 --input-path=./data/ --run-id={run_id} --output-path=./data/")
+    c.run(
+        f"python train.py --model-type=RandomForest "
+        f"--n-estimators=40 "
+        f"--criterion=gini "
+        f"--max-depth=10 "
+        f"--min-samples-split=57 "
+        f"--class-weight=balanced_subsample "
+        f"--run-id={run_id} "
+        f"--output-path=./data/ "
+        f"--input-path=./data/"
+    )
     c.run(f"python preprocess.py --test --run-id={run_id} --input-path=./data/X_test_1st_raw.csv --output-path=./data/ --verbose")
     c.run(f"python predict.py --run-id={run_id} --output-path=./data/ --input-path=./data/ --verbose")
     c.run(f"python result.py --run-id={run_id} --output-path=./data/ --input-path=./data/")
