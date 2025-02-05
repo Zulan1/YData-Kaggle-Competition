@@ -283,3 +283,22 @@ def save_ohe_to_file(ohe: OneHotEncoder, path: str, verbose: bool) -> None:
         pickle.dump(ohe, f)
     if verbose:
         print(f"OneHotEncoder saved to {path}")
+
+def save_data_for_holdout(df: pd.DataFrame, output_path: str) -> None:
+    """Save holdout features and labels to separate CSV files."""
+    features = df.drop(columns=cons.TARGET_COLUMN)
+    labels = df[cons.TARGET_COLUMN]
+    
+    features.to_csv(os.path.join(output_path, cons.DEFAULT_HOLDOUT_FEATURES_FILE), index=False)
+    labels.to_csv(os.path.join(output_path, cons.DEFAULT_HOLDOUT_LABELS_FILE), index=False)
+
+def save_data_for_validation(df: pd.DataFrame, output_path: str) -> None:
+    """Save validation features and labels to separate CSV files."""
+    df.to_csv(os.path.join(output_path, cons.DEFAULT_VAL_SET_FILE), index=False)
+    return
+
+def save_data_for_training(df: pd.DataFrame, output_path: str) -> None:
+    """Save training features and labels to separate CSV files."""
+    df.to_csv(os.path.join(output_path, cons.DEFAULT_TRAIN_SET_FILE), index=False)
+    return
+

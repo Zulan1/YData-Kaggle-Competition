@@ -1,5 +1,27 @@
 import pandas as pd
 
+def flag_high_volume_users(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Add binary feature indicating if user is in top 3% by number of sessions.
+    
+    Args:
+        df: DataFrame containing user_id column
+        
+    Returns:
+        DataFrame with new high_volume_user column
+    """
+    df = df.copy()  # Avoid modifying original
+    
+    # Count sessions per user
+    sessions_per_user = df['user_id'].value_counts()
+    
+    # Get users with more than 10 sessions
+    high_volume_users = sessions_per_user[sessions_per_user > 10].index
+    
+    # Add binary feature
+    df['high_volume_user'] = df['user_id'].isin(high_volume_users).astype(int)
+    
+    return df
 def add_first_session_feature(df: pd.DataFrame) -> pd.DataFrame:
     """
     Add binary feature indicating if this is the user's first session.
