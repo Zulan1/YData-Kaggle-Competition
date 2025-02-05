@@ -6,25 +6,15 @@ import numpy as np
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import OneHotEncoder
 import pickle
+from typing import Tuple
 
-from app.helper_functions import log, process_datetime, extract_time_features
+from app.helper_functions import (
+    log, process_datetime, extract_time_features,
+    one_hot_encode, get_ohe, get_imputer,
+    save_imputer_to_file, save_ohe_to_file, transform_categorical_columns, save_data_for_test
+)
 from app.argparser import get_preprocessing_args
-
-def transform_categorical_columns(df: pd.DataFrame, ohe: OneHotEncoder) -> pd.DataFrame:
-    """Transform categorical columns using a pre-fitted OneHotEncoder.
-    
-    Args:
-        df: Input DataFrame
-        ohe: Pre-fitted OneHotEncoder
-        
-    Returns:
-        DataFrame with transformed categorical columns
-    """
-    encoded_cats = ohe.transform(df[cons.CATEGORICAL])
-    feature_names = ohe.get_feature_names_out(cons.CATEGORICAL)
-    encoded_df = pd.DataFrame(encoded_cats, columns=feature_names, index=df.index)
-    df = df.drop(columns=cons.CATEGORICAL)
-    return pd.concat([df, encoded_df], axis=1)
+from app.feature_engineering import add_product_viewed_before, add_session_within_last_hour, add_first_session_feature
 
 
 def split_by_user(df, split_ratios=(0.2, 0.2, 0.6)):
@@ -70,7 +60,8 @@ def split_by_user(df, split_ratios=(0.2, 0.2, 0.6)):
     # For every unique stratification group, shuffle and split user_ids based on ratios.
     for _, group in user_stats.groupby('strat_group'):
         user_ids = group['user_id'].tolist()
-        np.random.shuffle(user_ids)  # randomize ordering to avoid ordering biases
+        rng = np.random.default_rng(cons.RANDOM_STATE)
+        rng.shuffle(user_ids)  # randomize ordering to avoid ordering biases
         
         total = len(user_ids)
         count_first = int(round(split_ratios[0] * total))
@@ -91,89 +82,52 @@ def split_by_user(df, split_ratios=(0.2, 0.2, 0.6)):
     
     return df[mask_first], df[mask_second], df[mask_third]
 
-def one_hot_encode(df):
-    """Encode categorical columns using OneHotEncoder.
-    Returns the encoded DataFrame and the encoder."""
-    ohe = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
-    encoded_cats = ohe.fit_transform(df[cons.CATEGORICAL])
-    feature_names = ohe.get_feature_names_out(cons.CATEGORICAL)
-    encoded_df = pd.DataFrame(encoded_cats, columns=feature_names, index=df.index)
-    df = df.drop(columns=cons.CATEGORICAL)  # Only drops categorical columns
-    df = pd.concat([df, encoded_df], axis=1)
-    return df, ohe
-
-def get_ohe(input_path) -> OneHotEncoder:
-    ohe_path = os.path.join(input_path, cons.DEFAULT_OHE_FILE)
-    return pickle.load(open(ohe_path, 'rb'))
-
-def get_imputer(input_path) -> SimpleImputer:
-    imputer_path = os.path.join(input_path, cons.DEFAULT_IMPUTER_FILE)
-    return pickle.load(open(imputer_path, 'rb'))
-
-def save_imputer_to_file(imputer, path, verbose):
-    """Save the Imputer to a file."""
-    with open(path, 'wb') as f:
-        pickle.dump(imputer, f)
-    if verbose:
-        print(f"Imputer saved to {path}")
-
-def save_ohe_to_file(ohe, path, verbose):
-    """Save the OneHotEncoder to a file."""
-    with open(path, 'wb') as f:
-        pickle.dump(ohe, f)
-    if verbose:
-        print(f"OneHotEncoder saved to {path}")
-
-def save_data_for_prediction(df: pd.DataFrame, path: str):
-    df.to_csv(path, index=False)
-    return df
-
-def feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
+def add_features(df: pd.DataFrame) -> pd.DataFrame:
     df = extract_time_features(df)
+    df = add_product_viewed_before(df)
+    df = add_session_within_last_hour(df)
+    df = add_first_session_feature(df)
     return df
 
 def preprocess_towards_training(df):
     """Preprocess training data."""
     df = process_datetime(df)
-    df = feature_engineering(df)
+    df = add_features(df)
     # Drop index columns and datetime before one-hot encoding
     df = df.drop(columns=cons.INDEX_COLUMNS)
     df = df.drop(columns=[cons.DATETIME_COLUMN])
     # Now perform one-hot encoding on the cleaned dataframe
     df, ohe = one_hot_encode(df)
+    df = df.drop(columns=cons.COLUMNS_TO_DROP)
     return df, ohe
 
-def preprocess_towards_validation(df, ohe):
-    """Preprocess validation data."""
-    df = feature_engineering(df)
-    df = transform_categorical_columns(df, ohe)
+def preprocess_towards_evaluation(df, ohe, imputer):
+    """Preprocess data for validation or test sets using pre-fitted transformers.
+    
+    This function applies the same preprocessing steps used in training to new data,
+    using the one-hot encoder (ohe) and imputer that were fit on the training data.
+    It is used for both validation data during training and for test data during inference.
+    
+    Args:
+        df (pd.DataFrame): Input DataFrame to preprocess
+        ohe (OneHotEncoder): Fitted one-hot encoder from training
+        imputer (SimpleImputer): Fitted imputer from training
+    
+    Returns:
+        pd.DataFrame: Preprocessed DataFrame ready for model evaluation
+    """
+    df = process_datetime(df)
+    df = add_features(df)
     df = df.drop(columns=cons.INDEX_COLUMNS)
     df = df.drop(columns=[cons.DATETIME_COLUMN])
-    return df
-
-def preprocess_towards_test(df, ohe, imputer):
-    """Preprocess test data using fitted transformers."""
-    # Process datetime if column exists
-    if cons.DATETIME_COLUMN in df.columns:
-        df = process_datetime(df)
-        df = extract_time_features(df)
-
     imputed_cols = imputer.transform(df[cons.COLUMNS_TO_IMPUTE])
     df[cons.COLUMNS_TO_IMPUTE] = imputed_cols
-    # Transform categorical columns after imputation
     df = transform_categorical_columns(df, ohe)
-    
-    # Convert to numpy array for imputation, then back to DataFrame
-    
-    # Drop unnecessary columns if they exist
-    for col in cons.INDEX_COLUMNS + [cons.DATETIME_COLUMN]:
-        if col in df.columns:
-            df = df.drop(columns=[col])
-    
+    df = df.drop(columns=cons.COLUMNS_TO_DROP)
     return df
 
 def clean_data(df):
-    df = df.dropna()
+    df = df.dropna(subset=[col for col in df.columns if col not in cons.COLUMNS_TO_DROP])
     df = df.drop_duplicates()
     return df
 
@@ -184,21 +138,12 @@ def save_data_for_holdout(df, output_path):
     holdout_labels.to_csv(os.path.join(output_path, cons.DEFAULT_HOLDOUT_LABELS_FILE), index=False)
     return
 
-def save_features_list_to_file(features_list, output_path):
-    with open(output_path, 'wb') as f:
-        pickle.dump(features_list, f)
-    return
-
 def save_data_for_training(df, output_path):
     df.to_csv(os.path.join(output_path, cons.DEFAULT_TRAIN_SET_FILE), index=False)
     return
 
 def save_data_for_validation(df, output_path):
     df.to_csv(os.path.join(output_path, cons.DEFAULT_VAL_SET_FILE), index=False)
-    return
-
-def save_data_for_test(df, output_path):
-    df.to_csv(os.path.join(output_path, cons.DEFAULT_TEST_SET_FILE), index=False)
     return
 
 def main():
@@ -221,7 +166,6 @@ def main():
     
 
     if train_mode:
-        df = df.drop(columns=cons.COLUMNS_TO_DROP)
         df = clean_data(df)
 
         df_train, df_val, df_holdout = split_by_user(df, cons.TRAIN_TEST_VAL_SPLIT)
@@ -246,7 +190,7 @@ def main():
         df_train, ohe = preprocess_towards_training(df_train)
         save_ohe_to_file(ohe, ohe_path, args.verbose)
 
-        df_val = preprocess_towards_validation(df_val, ohe)
+        df_val = preprocess_towards_evaluation(df_val, ohe, imputer)
 
         save_data_for_training(df_train, output_path)
         save_data_for_validation(df_val, output_path)
@@ -258,7 +202,7 @@ def main():
     if test_mode:
         ohe = get_ohe(output_path)
         imputer = get_imputer(output_path)
-        df = preprocess_towards_test(df, ohe, imputer)
+        df = preprocess_towards_evaluation(df, ohe, imputer)
         save_data_for_test(df, output_path)
 
         log(f"Test set saved to {output_path}.", args.verbose)

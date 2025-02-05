@@ -9,12 +9,17 @@ def get_train_args():
     parser.add_argument('--n-trials', type=int, default=100, help='number of trials for hyperparameter search')
     parser.add_argument('--scoring-method', type=str, default='f1', help='The metric to use for evaluation')
     parser.add_argument('--model-type', type=str, default=None, help='The type of model to train')
+    parser.add_argument('--eta', type=float, default=None, help='The learning rate for XGBoost')
+    parser.add_argument('--n-estimators', type=int, default=None, help='The number of estimators for XGBoost')
+    parser.add_argument('--max-depth', type=int, default=None, help='The maximum depth for XGBoost')
+    parser.add_argument('--subsample', type=float, default=None, help='The fraction of samples for XGBoost')
+    parser.add_argument('--gamma', type=float, default=None, help='The minimum loss reduction required to make a split for XGBoost')
+    parser.add_argument('--reg-lambda', type=float, default=None, help='The L2 regularization term on weights for XGBoost')
+    parser.add_argument('--scale-pos-weight', type=float, default=None, help='The scale_pos_weight parameter for XGBoost')
 
     parser.add_argument('--C', type=float, default=None, help='The regularization strength for Logistic Regression or SVM')
 
-    parser.add_argument('--n-estimators', type=int, default=None, help='The number of estimators for Random Forest')
     parser.add_argument('--criterion', type=str, default=None, help='The criterion for Random Forest')
-    parser.add_argument('--max-depth', type=int, default=None, help='The maximum depth for Random Forest')
     parser.add_argument('--min-samples-split', type=int, default=None, help='The minimum number of samples required to split an internal node for Random Forest')
     parser.add_argument('--class-weight', type=str, default=None, help='The class weight for Random Forest')
 
