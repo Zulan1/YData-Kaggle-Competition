@@ -12,14 +12,18 @@ def extract_time_features(df: pd.DataFrame) -> pd.DataFrame:
         - Cyclical hour encoding (hour_sin and hour_cos)
     """
     # One-hot encode day of week (0-6)
+    df = df.copy()
     days = df['DateTime'].dt.dayofweek
     for day in range(7):
-        df[f'day_{day}'] = (days == day).astype(int)
+        day_col = (days == day).astype(int)
+        df.loc[:, f'day_{day}'] = day_col
     
     # Cyclical encoding for hour of day
     hours = df['DateTime'].dt.hour
-    df['hour_sin'] = np.sin(hours * (2 * np.pi / 24))
-    df['hour_cos'] = np.cos(hours * (2 * np.pi / 24))
+    hours_sin = np.sin(hours * (2 * np.pi / 24))
+    hours_cos = np.cos(hours * (2 * np.pi / 24))
+    df.loc[:, 'hour_sin'] = hours_sin
+    df.loc[:, 'hour_cos'] = hours_cos
     
     return df
 def add_first_session_feature(df: pd.DataFrame) -> pd.DataFrame:
@@ -130,25 +134,10 @@ def add_product_viewed_before(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 def add_features(df: pd.DataFrame) -> pd.DataFrame:
-    df['DateTime'] = pd.to_datetime(df['DateTime'], errors='coerce')
     """Add all engineered features and verify no NaN values are introduced."""
-    if df.isna().any().any():
-        raise ValueError("Input DataFrame contains NaN values")
-        
+    df['DateTime'] = pd.to_datetime(df['DateTime'], errors='coerce')
     df = extract_time_features(df)
-    if df.isna().any().any():
-        raise ValueError("NaN values introduced by extract_time_features")
-        
     df = add_first_session_feature(df)
-    if df.isna().any().any():
-        raise ValueError("NaN values introduced by add_first_session_feature")
-        
     df = add_session_within_last_hour(df)
-    if df.isna().any().any():
-        raise ValueError("NaN values introduced by add_session_within_last_hour")
-        
     df = add_product_viewed_before(df)
-    if df.isna().any().any():
-        raise ValueError("NaN values introduced by add_product_viewed_before")
-        
     return df

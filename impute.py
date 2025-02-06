@@ -31,6 +31,7 @@ class ClickImputer:
     
     def transform(self, df: pd.DataFrame) -> pd.DataFrame:
         """Transform data by imputing missing values."""
+        df = df.copy()
         df = self._impute_user_id(df)
         df = self._impute_session_id(df)
         df[cons.COLUMNS_TO_IMPUTE] = self.imputer.transform(df[cons.COLUMNS_TO_IMPUTE])
