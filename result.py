@@ -33,6 +33,9 @@ def main():
         
         # Find incorrect predictions
         analysis_df['incorrect'] = analysis_df['actual'] != analysis_df['predicted']
+
+        # Save error analysis to file
+        analysis_df.to_csv(os.path.join(output_path, "data_for_error_analysis.csv"), index=False)
         
         # Group by each feature and calculate error rate
         feature_errors = {}
