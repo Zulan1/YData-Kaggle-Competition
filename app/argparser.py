@@ -33,18 +33,53 @@ def get_train_args():
     parser.add_argument('--n-trials', type=int, default=100, help='number of trials for hyperparameter search')
     parser.add_argument('--scoring-method', type=str, default='f1', help='The metric to use for evaluation')
     parser.add_argument('--model-type', type=str, default=None, help='The type of model to train, or to search on if optuna_search is enabled')
-
-    parser.add_argument('--xgb-params', type=parse_xgb_params, help='XGBoost hyperparameters, required if model-type is XGBoost\n'
-                        'Expected keys: eta, n_estimators, max_depth, subsample, gamma, reg_lambda')
-    parser.add_argument('--lgb-params', type=parse_lgb_params, help='LightGBM hyperparameters required if model-type is LightGBM\n'
-                        'Expected keys: n_estimators, learning_rate, max_depth, subsample, colsample_bytree, reg_alpha, reg_lambda')
-    parser.add_argument('--cb-params', type=parse_cb_params, help='CatBoost hyperparameters required if model-type is CatBoost\n'
-                        'Expected keys: iterations, learning_rate, depth, l2_leaf_reg')
-    parser.add_argument('--tree-params', type=parse_tree_params, help='DecisionTree hyperparameters required if model-type is DecisionTree\n'
-                        'Expected keys: criterion, max_depth, min_samples_split, class_weight')
-
     parser.add_argument('--run-id', type=str, help='Run ID')
     parser.add_argument('--output-path', type=str, default='models', help='Path to the trained model')
+
+    parser.add_argument('--xgb-params', type=parse_xgb_params, default=None,
+                        help='XGBoost hyperparameters, required if model-type is XGBoost\n'
+                        'Expected keys:\n'
+                        'eta - learning rate\n'
+                        'n_estimators - number of trees\n'
+                        'max_depth - maximum depth of each tree\n'
+                        'subsample - fraction of samples used for fitting each tree\n'
+                        'gamma - minimum loss reduction required to make a further partition\n'
+                        'reg_lambda - L2 regularization term on weights\n'
+                        'scale_pos_weight - True/False whether to rebalance classes\n'
+                        )
+
+    parser.add_argument('--lgb-params', type=parse_lgb_params, default=None,
+                        help='LightGBM hyperparameters, required if model-type is LightGBM\n'
+                        'Expected keys:\n'
+                        'n_estimators - number of boosting iterations\n'
+                        'learning_rate - boosting learning rate\n'
+                        'max_depth - maximum tree depth\n'
+                        'subsample - fraction of data to be used for each iteration\n'
+                        'colsample_bytree - fraction of features to be used for each iteration\n'
+                        'reg_alpha - L1 regularization term on weights\n'
+                        'reg_lambda - L2 regularization term on weights\n'
+                        'is_balanced - True/False whether to rebalance classes\n'
+                        )
+
+    parser.add_argument('--cb-params', type=parse_cb_params, default=None,
+                        help='CatBoost hyperparameters, required if model-type is CatBoost\n'
+                        'Expected keys:\n'
+                        'iterations - number of boosting iterations\n'
+                        'learning_rate - boosting learning rate\n'
+                        'depth - maximum tree depth\n'
+                        'l2_leaf_reg - L2 regularization term on leaf weights\n'
+                        'class_weights - True/False whether to rebalance classes\n'
+                        )
+
+    parser.add_argument('--tree-params', type=parse_tree_params, default=None,
+                        help='DecisionTree hyperparameters, required if model-type is DecisionTree\n'
+                        'Expected keys:\n'
+                        'criterion - function to measure the quality of a split\n'
+                        'max_depth - maximum tree depth\n'
+                        'min_samples_split - minimum number of samples required to split an internal node\n'
+                        'class_weight - True/False whether to rebalance classes\n'
+                        )
+
 
     return parser.parse_args()
 

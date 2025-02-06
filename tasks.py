@@ -62,7 +62,12 @@ def pipeline(c):
     """
     run_id = get_timestamp_str()
     c.run(f"python preprocess.py --run-id={run_id} --output-path=./data/ --input-path=./data/train_dataset_full.csv --verbose")
-    c.run(f"python train.py --optuna-search --run-id={run_id} --output-path=./data/")
+    c.run(
+        f"python train.py --optuna-search "
+        f"--input-path=./data/ "
+        f"--run-id={run_id} "
+        f"--output-path=./models/ "
+    )
     c.run(f"python preprocess.py --test --run-id={run_id} --input-path=./data/train_dataset_full.csv --output-path=./data/ --verbose")
     c.run(f"python predict.py --run-id={run_id} --output-path=./data/ --input-path=./data/ --verbose")
     c.run(f"python result.py --run-id={run_id} --output-path=./data/ --input-path=./data/ --error-analysis")
@@ -79,11 +84,10 @@ def external_pipeline(c):
     run_id = get_timestamp_str()
     c.run(f"python preprocess.py --mode=train --run-id={run_id} --input-path=./data/train_dataset_full.csv --output-path=./data/ --verbose")
     c.run(
-        f"python train.py --model-type=LogisticRegression "
-        f"--C=0.001 "
-        f"--run-id={run_id} "
-        f"--output-path=./data/ "
-        f"--input-path=./data/preprocess_{run_id}"
+        f"python train.py --optuna-search "
+        f"--input-path ./data/"
+        f"--run-id {run_id} "
+        f"--output-path ./models/ "
     )
     c.run(f"python preprocess.py --mode=test --run-id={run_id} --input-path=./data/--output-path=./data/ --verbose")
     c.run(f"python predict.py --run-id={run_id} --output-path=./data/ --input-path=./data/ --verbose")

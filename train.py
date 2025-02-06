@@ -42,39 +42,42 @@ def get_model(args, X_train, y_train, X_val, y_val):
     match model_type:
         case 'DecisionTree':
             model = DecisionTreeClassifier(
-                criterion=args.criterion,
-                max_depth=args.max_depth,
-                min_samples_split=args.min_samples_split,
-                class_weight=args.class_weight,
+                criterion = args.criterion,
+                max_depth = args.max_depth,
+                min_samples_split = args.min_samples_split,
+                class_weight =  'balanced' if args.class_weight else None,
             )
 
         case 'XGBoost':
             model = xgb.XGBClassifier(
-                eta=args.eta,
-                n_estimators=args.n_estimators,
-                max_depth=args.max_depth,
-                subsample=args.subsample,
-                gamma=args.gamma,
-                reg_lambda=args.reg_lambda,
-                device='cuda' if cp.cuda.is_available() else 'cpu',
+                eta = args.eta,
+                n_estimators = args.n_estimators,
+                max_depth = args.max_depth,
+                subsample = args.subsample,
+                gamma = args.gamma,
+                reg_lambda = args.reg_lambda,
+                scale_pos_weight =  y_train.value_counts()[0] / y_train.value_counts()[1] if args.scale_pos_weight else 1,
+                device = 'cuda' if cp.cuda.is_available() else 'cpu',
             )
         case 'LightGBM':
             model = lgb.LGBMClassifier(
-                n_estimators=args.n_estimators,
-                learning_rate=args.learning_rate,
-                max_depth=args.max_depth,
-                subsample=args.subsample,
-                colsample_bytree=args.colsample_bytree,
-                reg_alpha=args.reg_alpha,
-                reg_lambda=args.reg_lambda,
-                device='gpu' if cp.cuda.is_available() else 'cpu',
+                n_estimators = args.n_estimators,
+                learning_rate = args.learning_rate,
+                max_depth = args.max_depth,
+                subsample = args.subsample,
+                colsample_bytree = args.colsample_bytree,
+                reg_alpha = args.reg_alpha,
+                reg_lambda = args.reg_lambda,
+                is_balanced =  args.is_balanced,
+                device = 'gpu' if cp.cuda.is_available() else 'cpu',
             )
         case 'CatBoost':
             model = cb.CatBoostClassifier(
-                iterations=args.iterations,
-                learning_rate=args.learning_rate,
-                depth=args.depth,
-                l2_leaf_reg=args.l2_leaf_reg,
+                iterations = args.iterations,
+                learning_rate = args.learning_rate,
+                depth = args.depth,
+                l2_leaf_reg = args.l2_leaf_reg,
+                auto_class_weights = 'balanced' if args.class_weights else None,
                 task_type='GPU' if cp.cuda.is_available() else 'CPU',
             )
         case _:
@@ -104,47 +107,70 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
                     'class_weight': trial.suggest_categorical('class_weight', ['balanced', 'balanced_subsample', None]),
                     }
                 model = DecisionTreeClassifier()
+                model.set_params(**hparams)
+                model.fit(X_train, y_train)
             case 'XGBoost':
+                train_data = xgb.DMatrix(X_train, label=y_train)
                 hparams = {
-                    'eta': trial.suggest_float('eta', 0.001, 0.3),
-                    'n_estimators': trial.suggest_int('n_estimators', 10, 5000),
+                    'eta': trial.suggest_float('eta', 0.001, 0.3, log=True),
+                    'n_estimators': trial.suggest_int('n_estimators', 10, 5000, log=True),
                     'max_depth': trial.suggest_int('max_depth', 3, 10),
                     'subsample': trial.suggest_float('subsample', 0.5, 1.0),
                     'gamma': trial.suggest_float('gamma', 0, 0.5),
                     'reg_lambda': trial.suggest_float('reg_lambda', 0, 2),
+                    'scale_pos_weight': trial.suggest_categorical('scale_pos_weight', [y_train.value_counts()[0] / y_train.value_counts()[1], 1]),
                     'device': 'cuda' if cp.cuda.is_available() else 'cpu'
                     }
                 model = xgb.XGBClassifier()
+                model.fit(
+                    params=hparams,
+                    dataset=train_data,
+                )
             case 'LightGBM':
+                train_data = lgb.Dataset(X_train, label=y_train)
                 hparams = {
-                    'n_estimators': trial.suggest_int('n_estimators', 100, 5000),
-                    'learning_rate': trial.suggest_float('learning_rate', 0.001, 0.3),
+                    'n_estimators': trial.suggest_int('n_estimators', 100, 5000, log=True),
+                    'learning_rate': trial.suggest_float('learning_rate', 0.001, 0.3, log=True),
                     'max_depth': trial.suggest_int('max_depth', 3, 16),
                     'subsample': trial.suggest_float('subsample', 0.7, 1.0),
                     'colsample_bytree': trial.suggest_float('colsample_bytree', 0.7, 1.0),
                     'reg_alpha': trial.suggest_float('reg_alpha', 0, 1.0),
                     'reg_lambda': trial.suggest_float('reg_lambda', 0, 10.0),
                     'min_child_samples': trial.suggest_int('min_child_samples', 5, 100),
+                    'is_balanced': trial.suggest_categorical('is_balanced', [True, False]),
                     'device': 'gpu' if cp.cuda.is_available() else 'cpu',
+                    'valid_sets': [(X_val, y_val)],
                     'verbose': -1,
                     }
                 model = lgb.LGBMClassifier()
+                model.fit(
+                    params=hparams,
+                    train_set=train_data,
+                )
             case 'CatBoost':
                 hparams = {
-                    'iterations': trial.suggest_int('iterations', 100, 5000),
-                    'learning_rate': trial.suggest_float('learning_rate', 0.001, 0.3),
+                    'iterations': trial.suggest_int('iterations', 100, 5000, log=True),
+                    'learning_rate': trial.suggest_float('learning_rate', 0.001, 0.3, log=True),
                     'depth': trial.suggest_int('depth', 3, 10),
                     'l2_leaf_reg': trial.suggest_float('l2_leaf_reg', 0, 10),
                     'task_type': 'GPU' if cp.cuda.is_available() else 'CPU',
                     'verbose': 500,
                     }
+                auto_class_weights = trial.suggest_categorical('auto_class_weights', ['Balanced', None]),
+                if auto_class_weights == 'Balanced':
+                    hparams['auto_class_weights'] = 'Balanced'
                 model = cb.CatBoostClassifier()
+                model.fit(
+                    X_train, y_train,
+                    eval_set=(X_val, y_val),
+                    **hparams
+                )
             case _:
                 raise ValueError('Invalid model type')
 
         print(f"\n\nStarted trial {trial.number} with params: {trial.params}.")
-        model.set_params(**hparams)
-        model.fit(X_train, y_train)
+        # model.set_params(**hparams)
+        # model.fit(X_train, y_train)
         y_pred = model.predict(X_val)
         print(f"{(y_pred == 1).sum()} out of {len(y_pred)} are 1")
         score = compute_score(args.scoring_method, y_val, y_pred)
@@ -200,15 +226,8 @@ def main():
 
     X_train, y_train = split_dataset_Xy(df_train)
     X_val, y_val = split_dataset_Xy(df_val)
-    # selected_columns = cons.DEMOGRAPHICS
-    # selected_columns = [col for col in X_train.columns if any(c in col for c in selected_columns)]
 
-    # X_train.drop(columns=['DateTime', 'user_id', 'session_id'], inplace=True)
-    # X_val.drop(columns=['DateTime', 'user_id', 'session_id'], inplace=True)
-    # X_train = X_train[selected_columns]
-    # X_val = X_val[selected_columns]
-   # X_train, y_train = SMOTE().fit_resample(X_train, y_train)
-   # X_train = enforce_smote(X_train, transformer)
+    # X_train, y_train = SMOTE().fit_resample(X_train, y_train)
 
 
         strategies = ('most_frequent', 'stratified', 'uniform')
@@ -242,12 +261,6 @@ def main():
     with open(f'{output_path}/model.pkl', 'wb') as p:
         pickle.dump(model, p)
     
-    # predictions = model.predict(X_test)
-    # score = compute_score(args.scoring_method, y_test, predictions)
-    # print(confusion_matrix(y_test, predictions))
-    # print(f"Final Test Model score {args.scoring_method}: {score}")
-    # wandb.log({f'test_{args.scoring_method}': score})
 
-            
 if __name__ == '__main__':
     main()
