@@ -77,18 +77,14 @@ def external_pipeline(c):
     4. Analyze results
     """
     run_id = get_timestamp_str()
-    c.run(f"python preprocess.py --run-id={run_id} --input-path=./data/train_dataset_full.csv --output-path=./data/ --verbose")
+    c.run(f"python preprocess.py --mode=train --run-id={run_id} --input-path=./data/train_dataset_full.csv --output-path=./data/ --verbose")
     c.run(
-        f"python train.py --model-type=RandomForest "
-        f"--n-estimators=40 "
-        f"--criterion=gini "
-        f"--max-depth=10 "
-        f"--min-samples-split=57 "
-        f"--class-weight=balanced_subsample "
+        f"python train.py --model-type=LogisticRegression "
+        f"--C=0.001 "
         f"--run-id={run_id} "
         f"--output-path=./data/ "
-        f"--input-path=./data/"
+        f"--input-path=./data/preprocess_{run_id}"
     )
-    c.run(f"python preprocess.py --test --run-id={run_id} --input-path=./data/X_test_1st_raw.csv --output-path=./data/ --verbose")
+    c.run(f"python preprocess.py --mode=test --run-id={run_id} --input-path=./data/--output-path=./data/ --verbose")
     c.run(f"python predict.py --run-id={run_id} --output-path=./data/ --input-path=./data/ --verbose")
     c.run(f"python result.py --run-id={run_id} --output-path=./data/ --input-path=./data/")

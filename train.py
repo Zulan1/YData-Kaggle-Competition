@@ -8,6 +8,10 @@ import catboost as cb
 import cupy as cp
 import pandas as pd
 import constants as cons
+from app.helper_functions import get_transformer
+
+import pandas as pd
+
 
 from imblearn.over_sampling import SMOTE
 from sklearn.dummy import DummyClassifier
@@ -155,14 +159,42 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
     # optuna.visualization.plot_param_importances(study).write_image('plots/optuna_importances.png')
     return study.best_params
 
+def enforce_smote(X, transformer):
+    # Get categorical columns from transformer
+    one_hot_groups = []
+    print(X.columns)
+
+    # Group one-hot encoded columns correctly
+    for category in cons.COLUMNS_TO_OHE:
+        group = [col for col in X.columns if col.startswith(f"{category}_")]
+        one_hot_groups.append(group)
+    
+    print(one_hot_groups)
+    
+    for col_group in one_hot_groups:
+        # For each group of one-hot columns, ensure exactly one 1 per row
+        group_data = X[col_group]
+        max_cols = group_data.idxmax(axis=1)
+        
+        # Set all columns in group to 0, then set max column to 1
+        X[col_group] = 0
+        for row_idx, col in enumerate(max_cols):
+            X.at[row_idx, col] = 1
+    return X
+
+
+
 def main():
     args = get_train_args()
 
     input_path = args.input_path
     run_id = args.run_id
+    transformer = get_transformer(input_path)
+
+
     
-    train_path = os.path.join(input_path, f'preprocess_{run_id}', cons.DEFAULT_TRAIN_SET_FILE)
-    val_path = os.path.join(input_path, f'preprocess_{run_id}', cons.DEFAULT_VAL_SET_FILE)
+    train_path = os.path.join(input_path, cons.DEFAULT_TRAIN_SET_FILE)
+    val_path = os.path.join(input_path, cons.DEFAULT_VAL_SET_FILE)
     df_train = pd.read_csv(train_path)
     df_val = pd.read_csv(val_path)
 
@@ -175,10 +207,11 @@ def main():
     # X_val.drop(columns=['DateTime', 'user_id', 'session_id'], inplace=True)
     # X_train = X_train[selected_columns]
     # X_val = X_val[selected_columns]
-    X_train, y_train = SMOTE().fit_resample(X_train, y_train)
+   # X_train, y_train = SMOTE().fit_resample(X_train, y_train)
+   # X_train = enforce_smote(X_train, transformer)
 
-    
-    strategies = ('most_frequent', 'stratified', 'uniform')
+
+        strategies = ('most_frequent', 'stratified', 'uniform')
     dmy_scores = []
     for strategy in strategies:
         dmy_cls = DummyClassifier(strategy=strategy)

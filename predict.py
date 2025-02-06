@@ -3,67 +3,44 @@ import pandas as pd
 import pickle
 import constants as cons
 import os
-from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import OneHotEncoder
-from preprocess import feature_engineering
+from app.helper_functions import log
 
 def get_model(input_path: str, run_id: str):
-    model_path = os.path.join(input_path, f"train_{run_id}/model.pkl")
-    return pickle.load(open(model_path, 'rb'))
+    """Load trained model from pickle file."""
+    model_path = os.path.join(input_path, f"train_{run_id}/{cons.DEFAULT_MODEL_FILE}")
+    with open(model_path, 'rb') as f:
+        return pickle.load(f)
 
 def get_data(input_path: str, run_id: str) -> pd.DataFrame:
+    """Load preprocessed test data."""
     data_path = os.path.join(input_path, f"preprocess_{run_id}/{cons.DEFAULT_TEST_SET_FILE}")
     return pd.read_csv(data_path)
-
-def transform_categorical_columns(df: pd.DataFrame, ohe: OneHotEncoder) -> pd.DataFrame:
-    """Transform categorical columns using a pre-fitted OneHotEncoder.
-    
-    Args:
-        df: Input DataFrame
-        ohe: Pre-fitted OneHotEncoder
-        
-    Returns:
-        DataFrame with transformed categorical columns
-    """
-    encoded_cats = ohe.transform(df[cons.CATEGORICAL])
-    feature_names = ohe.get_feature_names_out(cons.CATEGORICAL)
-    encoded_df = pd.DataFrame(encoded_cats, columns=feature_names, index=df.index)
-    df = df.drop(columns=cons.CATEGORICAL)
-    return pd.concat([df, encoded_df], axis=1)
-
 
 def main():
     args = get_predict_args()
     run_id = args.run_id
+    verbose = args.verbose
 
-    if args.verbose:
-        print("Loading model")
+    log("Loading model", verbose)
     model = get_model(args.input_path, run_id)
+    log(f"Model type: {model.__class__.__name__}", verbose)
     
-    if args.verbose:
-        print(f"Model type: {model.__class__.__name__}")
-        print(f"Loading data from {args.input_path}")
-    
+    log(f"Loading data from {args.input_path}", verbose)
     df = get_data(args.input_path, run_id)
 
-    if args.verbose:
-        print(f"Predicting {cons.TARGET_COLUMN} for {args.input_path}")
-    
-    print(df.columns)
+    log(f"Predicting {cons.TARGET_COLUMN}", verbose)
+    predictions = pd.DataFrame(
+        model.predict(df), 
+        index=df.index,
+        columns=[cons.TARGET_COLUMN]
+    )
 
-    predictions = model.predict(df)
-    predictions = pd.DataFrame(predictions, index=df.index, columns=[cons.TARGET_COLUMN])
-    
-    if args.verbose:
-        print(f"Predicted {cons.TARGET_COLUMN} for {args.input_path}")
-
+    # Save predictions
     output_dir = os.path.join(args.output_path, f"predict_{run_id}")
     os.makedirs(output_dir, exist_ok=True)
     output_path = os.path.join(output_dir, cons.DEFAULT_PREDICTIONS_FILE)
     predictions.to_csv(output_path, index=False)
-
-    if args.verbose:
-        print(f"Predictions saved to {output_path}")
+    log(f"Predictions saved to {output_path}", verbose)
 
 if __name__ == '__main__':
     main()
