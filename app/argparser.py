@@ -16,13 +16,12 @@ def get_train_args():
     parser.add_argument('--gamma', type=float, default=None, help='The minimum loss reduction required to make a split for XGBoost')
     parser.add_argument('--reg-lambda', type=float, default=None, help='The L2 regularization term on weights for XGBoost')
     parser.add_argument('--scale-pos-weight', type=float, default=None, help='The scale_pos_weight parameter for XGBoost')
-
-    parser.add_argument('--C', type=float, default=None, help='The regularization strength for Logistic Regression or SVM')
-
-    parser.add_argument('--criterion', type=str, default=None, help='The criterion for Random Forest')
+    parser.add_argument('--max-features', type=str, default=None, help='The maximum number of features for Random Forest')
     parser.add_argument('--min-samples-split', type=int, default=None, help='The minimum number of samples required to split an internal node for Random Forest')
+    parser.add_argument('--C', type=float, default=None, help='The regularization strength for Logistic Regression or SVM')
+    parser.add_argument('--criterion', type=str, default=None, help='The criterion for Random Forest')
     parser.add_argument('--class-weight', type=str, default=None, help='The class weight for Random Forest')
-
+    parser.add_argument('--min-samples-leaf', type=int, default=None, help='The minimum number of samples required to be at a leaf node for Random Forest')
     parser.add_argument('--kernel', type=str, default=None, help='The kernel for SVM')
     parser.add_argument('--run-id', type=str, help='Run ID')
     parser.add_argument('--output-path', type=str, default='models', help='Path to the trained model')
@@ -31,11 +30,12 @@ def get_train_args():
 
 def get_preprocessing_args():
     parser = argparse.ArgumentParser(description='Data Processing Pipeline')
-    parser.add_argument('--input-path', default=cons.DEFAULT_RAW_TRAIN_FILE, type=str, help='CSV filename to load')
+    parser.add_argument('--input-path', type=str, help='Folder with input data')
     parser.add_argument('--output-path', type=str, help='Output directory of all proccessed csv files: train, val, test')
     parser.add_argument('--verbose', action='store_true', help='Print additional information')
-    parser.add_argument('--test', action='store_true', help='Preprocess external test set only')
+    parser.add_argument('--mode', type=str, default='train', help='Mode: train, test')
     parser.add_argument('--run-id', type=str, help='Run ID')
+
     return parser.parse_args()
 
 

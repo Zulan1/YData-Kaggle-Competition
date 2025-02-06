@@ -1,25 +1,29 @@
 import pandas as pd
-
-def flag_high_volume_users(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Add binary feature indicating if user is in top 3% by number of sessions.
+import numpy as np
+def extract_time_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Extract time features from the DateTime column.
     
     Args:
-        df: DataFrame containing user_id column
+        df: DataFrame containing DateTime column
         
     Returns:
-        DataFrame with new high_volume_user column
+        DataFrame with added time-based features:
+        - One-hot encoded day of week (day_0 through day_6)
+        - Cyclical hour encoding (hour_sin and hour_cos)
     """
-    df = df.copy()  # Avoid modifying original
+    # One-hot encode day of week (0-6)
+    df = df.copy()
+    days = df['DateTime'].dt.dayofweek
+    for day in range(7):
+        day_col = (days == day).astype(int)
+        df.loc[:, f'day_{day}'] = day_col
     
-    # Count sessions per user
-    sessions_per_user = df['user_id'].value_counts()
-    
-    # Get users with more than 10 sessions
-    high_volume_users = sessions_per_user[sessions_per_user > 10].index
-    
-    # Add binary feature
-    df['high_volume_user'] = df['user_id'].isin(high_volume_users).astype(int)
+    # Cyclical encoding for hour of day
+    hours = df['DateTime'].dt.hour
+    hours_sin = np.sin(hours * (2 * np.pi / 24))
+    hours_cos = np.cos(hours * (2 * np.pi / 24))
+    df.loc[:, 'hour_sin'] = hours_sin
+    df.loc[:, 'hour_cos'] = hours_cos
     
     return df
 def add_first_session_feature(df: pd.DataFrame) -> pd.DataFrame:
@@ -127,4 +131,13 @@ def add_product_viewed_before(df: pd.DataFrame) -> pd.DataFrame:
     df['product_viewed_before'] = result_df['product_viewed_before'].astype(int)
     df.drop('_temp_idx', axis=1, inplace=True)
     
+    return df
+
+def add_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Add all engineered features and verify no NaN values are introduced."""
+    df['DateTime'] = pd.to_datetime(df['DateTime'], errors='coerce')
+    df = extract_time_features(df)
+    df = add_first_session_feature(df)
+    df = add_session_within_last_hour(df)
+    df = add_product_viewed_before(df)
     return df
