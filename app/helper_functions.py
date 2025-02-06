@@ -4,7 +4,25 @@ import pandas as pd
 from datetime import datetime
 from typing import Tuple
 import constants as cons
+import pickle
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.impute import SimpleImputer
 
+def transform_categorical_columns(df: pd.DataFrame, ohe: OneHotEncoder) -> pd.DataFrame:
+    """Transform categorical columns using a pre-fitted OneHotEncoder.
+    
+    Args:
+        df: Input DataFrame
+        ohe: Pre-fitted OneHotEncoder
+        
+    Returns:
+        DataFrame with transformed categorical columns
+    """
+    encoded_cats = ohe.transform(df[cons.CATEGORICAL])
+    feature_names = ohe.get_feature_names_out(cons.CATEGORICAL)
+    encoded_df = pd.DataFrame(encoded_cats, columns=feature_names, index=df.index)
+    df = df.drop(columns=cons.CATEGORICAL)
+    return pd.concat([df, encoded_df], axis=1)
 
 def prepare_features_for_model(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -70,17 +88,6 @@ def clean_data(df):
     return df
 '''
 
-def impute(df):
-    """
-    Impute missing values in the DataFrame using mode.
-    
-    Args:
-        df (pd.DataFrame): Input DataFrame with missing values
-        
-    Returns:
-        pd.DataFrame: DataFrame with missing values imputed
-    """
-    return df.fillna(df.mode().iloc[0])
 
 
 def remove_duplicates(df: pd.DataFrame) -> pd.DataFrame:
@@ -95,10 +102,7 @@ def drop_missing_values(df: pd.DataFrame) -> pd.DataFrame:
     """Drop all rows with missing values."""
     return df.dropna()
 
-def feature_engineering(df: pd.DataFrame) -> pd.DataFrame:
-    df = process_datetime(df, cons.DATETIME_COLUMN)
-    df = extract_time_features(df, cons.DATETIME_COLUMN)
-    return df
+
 
 def process_datetime(df: pd.DataFrame, datetime_column: str = cons.DATETIME_COLUMN) -> pd.DataFrame:
     """Convert DateTime column to a proper datetime object and validate entries.
@@ -139,11 +143,6 @@ def extract_time_features(df: pd.DataFrame, datetime_column: str = cons.DATETIME
     df['day_of_week'] = df[datetime_column].dt.dayofweek
     return df
 
-def clean_data(df: pd.DataFrame) -> pd.DataFrame:
-    """Clean data by removing duplicates and NA values."""
-    df = df.dropna()
-    df = df.drop_duplicates()
-    return df
 
 def split_dataset_Xy(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Split dataset into features (X) and target (y)."""
@@ -162,6 +161,9 @@ def combine_Xy(X: pd.DataFrame, y : pd.DataFrame) -> pd.DataFrame:
     """
     return pd.concat([X, y], axis=1)
 
+def save_data_for_test(df, output_path):
+    df.to_csv(os.path.join(output_path, cons.DEFAULT_TEST_SET_FILE), index=False)
+    return
 
 def align_columns(df, all_columns):
     """
@@ -246,3 +248,57 @@ def log(message: str, verbose: bool, level: str = "INFO") -> None:
     """Log a message if verbose is True."""
     if verbose:
         print(f"{datetime.now().isoformat()} [{level}] {message}")
+
+def one_hot_encode(df: pd.DataFrame) -> Tuple[pd.DataFrame, OneHotEncoder]:
+    """Encode categorical columns using OneHotEncoder.
+    Returns the encoded DataFrame and the encoder."""
+    ohe = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
+    encoded_cats = ohe.fit_transform(df[cons.CATEGORICAL])
+    feature_names = ohe.get_feature_names_out(cons.CATEGORICAL)
+    encoded_df = pd.DataFrame(encoded_cats, columns=feature_names, index=df.index)
+    df = df.drop(columns=cons.CATEGORICAL)  # Only drops categorical columns
+    df = pd.concat([df, encoded_df], axis=1)
+    return df, ohe
+
+def get_ohe(input_path: str) -> OneHotEncoder:
+    """Load OneHotEncoder from file."""
+    ohe_path = os.path.join(input_path, cons.DEFAULT_OHE_FILE)
+    return pickle.load(open(ohe_path, 'rb'))
+
+def get_imputer(input_path: str) -> SimpleImputer:
+    """Load SimpleImputer from file."""
+    imputer_path = os.path.join(input_path, cons.DEFAULT_IMPUTER_FILE)
+    return pickle.load(open(imputer_path, 'rb'))
+
+def save_imputer_to_file(imputer: SimpleImputer, path: str, verbose: bool) -> None:
+    """Save the Imputer to a file."""
+    with open(path, 'wb') as f:
+        pickle.dump(imputer, f)
+    if verbose:
+        print(f"Imputer saved to {path}")
+
+def save_ohe_to_file(ohe: OneHotEncoder, path: str, verbose: bool) -> None:
+    """Save the OneHotEncoder to a file."""
+    with open(path, 'wb') as f:
+        pickle.dump(ohe, f)
+    if verbose:
+        print(f"OneHotEncoder saved to {path}")
+
+def save_data_for_holdout(df: pd.DataFrame, output_path: str) -> None:
+    """Save holdout features and labels to separate CSV files."""
+    features = df.drop(columns=cons.TARGET_COLUMN)
+    labels = df[cons.TARGET_COLUMN]
+    
+    features.to_csv(os.path.join(output_path, cons.DEFAULT_HOLDOUT_FEATURES_FILE), index=False)
+    labels.to_csv(os.path.join(output_path, cons.DEFAULT_HOLDOUT_LABELS_FILE), index=False)
+
+def save_data_for_validation(df: pd.DataFrame, output_path: str) -> None:
+    """Save validation features and labels to separate CSV files."""
+    df.to_csv(os.path.join(output_path, cons.DEFAULT_VAL_SET_FILE), index=False)
+    return
+
+def save_data_for_training(df: pd.DataFrame, output_path: str) -> None:
+    """Save training features and labels to separate CSV files."""
+    df.to_csv(os.path.join(output_path, cons.DEFAULT_TRAIN_SET_FILE), index=False)
+    return
+
