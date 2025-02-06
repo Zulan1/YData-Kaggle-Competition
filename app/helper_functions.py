@@ -7,6 +7,7 @@ import constants as cons
 import pickle
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.impute import SimpleImputer
+from transformer import DataTransformer
 
 def transform_categorical_columns(df: pd.DataFrame, ohe: OneHotEncoder) -> pd.DataFrame:
     """Transform categorical columns using a pre-fitted OneHotEncoder.
@@ -208,11 +209,6 @@ def encode_data(train: pd.DataFrame, val: pd.DataFrame, test: pd.DataFrame, cate
     return train_encoded, val_encoded, test_encoded
 
 
-def save_data_for_training(train, val, path):
-    """Save train, validation, and test sets to CSV files."""
-    train.to_csv(f'{path}/{cons.DEFAULT_TRAIN_SET_FILE}', index=False)
-    val.to_csv(f'{path}/{cons.DEFAULT_VAL_SET_FILE}', index=False)
-
 
 # def load_training_data(path: str = cons.DATA_PATH, 
 #                        train_fn: str = cons.DEFAULT_TRAIN_SET_FILE, 
@@ -249,6 +245,7 @@ def log(message: str, verbose: bool, level: str = "INFO") -> None:
     if verbose:
         print(f"{datetime.now().isoformat()} [{level}] {message}")
 
+
 def one_hot_encode(df: pd.DataFrame) -> Tuple[pd.DataFrame, OneHotEncoder]:
     """Encode categorical columns using OneHotEncoder.
     Returns the encoded DataFrame and the encoder."""
@@ -259,6 +256,12 @@ def one_hot_encode(df: pd.DataFrame) -> Tuple[pd.DataFrame, OneHotEncoder]:
     df = df.drop(columns=cons.CATEGORICAL)  # Only drops categorical columns
     df = pd.concat([df, encoded_df], axis=1)
     return df, ohe
+
+def get_transformer(input_path: str) -> DataTransformer:
+    """Load trained transformer from pickle file."""
+    transformer_path = os.path.join(input_path, cons.DEFAULT_TRANSFORMER_FILE)
+    with open(transformer_path, 'rb') as f:
+        return pickle.load(f)
 
 def get_ohe(input_path: str) -> OneHotEncoder:
     """Load OneHotEncoder from file."""

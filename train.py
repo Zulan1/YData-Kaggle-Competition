@@ -163,8 +163,8 @@ def main():
     input_path = args.input_path
     run_id = args.run_id
     
-    train_path = os.path.join(input_path, f'preprocess_{run_id}', cons.DEFAULT_TRAIN_SET_FILE)
-    val_path = os.path.join(input_path, f'preprocess_{run_id}', cons.DEFAULT_VAL_SET_FILE)
+    train_path = os.path.join(input_path, cons.DEFAULT_TRAIN_SET_FILE)
+    val_path = os.path.join(input_path, cons.DEFAULT_VAL_SET_FILE)
     df_train = pd.read_csv(train_path)
     df_val = pd.read_csv(val_path)
 
@@ -180,7 +180,6 @@ def main():
     X_train, y_train = SMOTE().fit_resample(X_train, y_train)
 
     
-
     dmy_cls = DummyClassifier(strategy='most_frequent')
     dmy_cls.fit(X_train, y_train)
     baseline_score = compute_score(args.scoring_method, dmy_cls.predict(X_val), y_val)
