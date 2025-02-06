@@ -52,3 +52,6 @@ dist/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+#Certain jupyter notebooks:
+shay_error_analysis.ipynb
