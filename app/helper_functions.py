@@ -305,3 +305,25 @@ def save_data_for_training(df: pd.DataFrame, output_path: str) -> None:
     df.to_csv(os.path.join(output_path, cons.DEFAULT_TRAIN_SET_FILE), index=False)
     return
 
+def get_last_run_id(data_path: str = './data') -> str:
+    """Get the last run ID from the file or the last modified folder.
+    
+    Args:
+        data_path (str): The path to the data directory.
+        
+    Returns:
+        str: The last run ID.
+    """
+    run_id_file = os.path.join(data_path, 'last_run_id.txt')
+    
+    if os.path.exists(run_id_file):
+        with open(run_id_file, 'r') as file:
+            return file.read().strip()
+    
+    result_folders = [f for f in os.listdir(data_path) if os.path.isdir(os.path.join(data_path, f)) and f.startswith('result_')]
+    if not result_folders:
+        return None
+    
+    latest_folder = max(result_folders, key=lambda f: os.path.getmtime(os.path.join(data_path, f)))
+    return latest_folder.split('_')[-1]
+
