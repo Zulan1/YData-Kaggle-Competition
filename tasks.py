@@ -63,8 +63,13 @@ def pipeline(c):
     run_id = get_timestamp_str()
     c.run(f"python preprocess.py --mode=train --run-id={run_id} --output-path=./data/ --input-path=./data/ --verbose")
     c.run(
-        f"python train.py --model-type=LogisticRegression "
-        f"--C=0.001 "
+        f"python train.py --model-type=RandomForest "
+        f"--n-estimators=500 "
+        f"--criterion=gini "
+        f"--max-depth=10 "
+        f"--min-samples-split=5 "
+        f"--min-samples-leaf=2 "
+        f"--class-weight=balanced_subsample "
         f"--run-id={run_id} "
         f"--output-path=./data/ "
         f"--input-path=./data/preprocess_{run_id}"
