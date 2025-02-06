@@ -32,17 +32,26 @@ def main():
         analysis_df.columns = list(features.columns) + ['actual', 'predicted']
         
         # Find incorrect predictions
-        analysis_df['incorrect'] = analysis_df['actual'] != analysis_df['predicted']
+        analysis_df['incorrect'] = (analysis_df['actual'] != analysis_df['predicted']).astype(int)
+        analysis_df['FP'] = ((analysis_df['actual'] == 0) & (analysis_df['predicted'] == 1)).astype(int)
+        analysis_df['FN'] = ((analysis_df['actual'] == 1) & (analysis_df['predicted'] == 0)).astype(int)
 
         # Save error analysis to file
         analysis_df.to_csv(os.path.join(output_path, "data_for_error_analysis.csv"), index=False)
         
         # Group by each feature and calculate error rate
         feature_errors = {}
+        feature_FP = {}
+        feature_FN = {}
         for column in features.columns:
             if column not in cons.INDEX_COLUMNS:  # Skip ID columns
                 errors = analysis_df.groupby(column)['incorrect'].mean().sort_values(ascending=False)
+                false_positives = analysis_df.groupby(column)['FP'].mean().sort_values(ascending=False)
+                false_negatives = analysis_df.groupby(column)['FN'].mean().sort_values(ascending=False)
+
                 feature_errors[column] = errors
+                feature_FP[column] = false_positives
+                feature_FN[column] = false_negatives
                 
                 if args.verbose:
                     print(f"\nError rates by {column}:")

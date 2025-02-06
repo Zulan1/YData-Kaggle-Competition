@@ -61,6 +61,12 @@ def pipeline(c):
     5. Analyze results
     """
     run_id = get_timestamp_str()
+
+    # save the lastest run id to a file, for easy retrieval for evaluation and error analysis purposes:
+    with open("latest_run_id.txt", "w") as f:
+        f.write('./data/last_run_id.txt')
+    
+
     c.run(f"python preprocess.py --mode=train --run-id={run_id} --output-path=./data/ --input-path=./data/ --verbose")
     c.run(
         f"python train.py --model-type=RandomForest "
