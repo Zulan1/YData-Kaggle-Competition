@@ -7,4 +7,6 @@ optuna
 wandb
 xgboost
 lightgbm
+catboost
 imblearn
+cupy

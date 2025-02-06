@@ -1,6 +1,30 @@
 import argparse
 import constants as cons
 
+def parse_xgb_params(params):
+    keys = ['eta', 'n_estimators', 'max_depth', 'subsample', 'gamma', 'reg_lambda']
+    if len(params) != len(keys):    
+        raise ValueError(f'Expected {len(keys)} hyperparameters, got {len(params)}')
+    return {k: params[k] for k in keys}
+
+def parse_lgb_params(params):
+    keys = ['n_estimators', 'learning_rate', 'max_depth', 'subsample', 'colsample_bytree', 'reg_alpha', 'reg_lambda']
+    if len(params) != len(keys):    
+        raise ValueError(f'Expected {len(keys)} hyperparameters, got {len(params)}')
+    return {k: params[k] for k in keys}
+
+def parse_cb_params(params):
+    keys = ['iterations', 'learning_rate', 'depth', 'l2_leaf_reg']
+    if len(params) != len(keys):    
+        raise ValueError(f'Expected {len(keys)} hyperparameters, got {len(params)}')
+    return {k: params[k] for k in keys}
+
+def parse_tree_params(params):
+    keys = ['criterion', 'max_depth', 'min_samples_split', 'class_weight']
+    if len(params) != len(keys):    
+        raise ValueError(f'Expected {len(keys)} hyperparameters, got {len(params)}')
+    return {k: params[k] for k in keys}
+
 #define training arguments
 def get_train_args():
     parser = argparse.ArgumentParser(description='Train a model')
@@ -8,17 +32,17 @@ def get_train_args():
     parser.add_argument('--optuna-search', action='store_true', help='Whether to perform hyperparameter search')
     parser.add_argument('--n-trials', type=int, default=100, help='number of trials for hyperparameter search')
     parser.add_argument('--scoring-method', type=str, default='f1', help='The metric to use for evaluation')
-    parser.add_argument('--model-type', type=str, default=None, help='The type of model to train')
+    parser.add_argument('--model-type', type=str, default=None, help='The type of model to train, or to search on if optuna_search is enabled')
 
-    parser.add_argument('--C', type=float, default=None, help='The regularization strength for Logistic Regression or SVM')
+    parser.add_argument('--xgb-params', type=parse_xgb_params, help='XGBoost hyperparameters, required if model-type is XGBoost\n'
+                        'Expected keys: eta, n_estimators, max_depth, subsample, gamma, reg_lambda')
+    parser.add_argument('--lgb-params', type=parse_lgb_params, help='LightGBM hyperparameters required if model-type is LightGBM\n'
+                        'Expected keys: n_estimators, learning_rate, max_depth, subsample, colsample_bytree, reg_alpha, reg_lambda')
+    parser.add_argument('--cb-params', type=parse_cb_params, help='CatBoost hyperparameters required if model-type is CatBoost\n'
+                        'Expected keys: iterations, learning_rate, depth, l2_leaf_reg')
+    parser.add_argument('--tree-params', type=parse_tree_params, help='DecisionTree hyperparameters required if model-type is DecisionTree\n'
+                        'Expected keys: criterion, max_depth, min_samples_split, class_weight')
 
-    parser.add_argument('--n-estimators', type=int, default=None, help='The number of estimators for Random Forest')
-    parser.add_argument('--criterion', type=str, default=None, help='The criterion for Random Forest')
-    parser.add_argument('--max-depth', type=int, default=None, help='The maximum depth for Random Forest')
-    parser.add_argument('--min-samples-split', type=int, default=None, help='The minimum number of samples required to split an internal node for Random Forest')
-    parser.add_argument('--class-weight', type=str, default=None, help='The class weight for Random Forest')
-
-    parser.add_argument('--kernel', type=str, default=None, help='The kernel for SVM')
     parser.add_argument('--run-id', type=str, help='Run ID')
     parser.add_argument('--output-path', type=str, default='models', help='Path to the trained model')
 

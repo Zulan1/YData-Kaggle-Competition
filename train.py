@@ -1,34 +1,28 @@
 import optuna
 import pickle
 import os
-import time
 import wandb
 import xgboost as xgb
 import lightgbm as lgb
-import constants as cons
-
+import catboost as cb
+import cupy as cp
 import pandas as pd
-
+import constants as cons
 
 from imblearn.over_sampling import SMOTE
 from sklearn.dummy import DummyClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.svm import SVC
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
-from sklearn.datasets import load_diabetes
+from sklearn.tree import DecisionTreeClassifier
+
 
 from app.metrics import compute_score
 from app.argparser import get_train_args
 from app.helper_functions import split_dataset_Xy
 
 models = {
-    'LogisticRegression': LogisticRegression(),
-    'RandomForest': RandomForestClassifier(),
-    'SVM': SVC(),
     'XGBoost': xgb.XGBClassifier(),
     'LightGBM': lgb.LGBMClassifier(),
+    'CatBoost': cb.CatBoostClassifier(),
 }
 
 def get_model(args, X_train, y_train, X_val, y_val):
@@ -42,21 +36,14 @@ def get_model(args, X_train, y_train, X_val, y_val):
 
     model_type = args.model_type
     match model_type:
-        case 'LogisticRegression':
-            model = LogisticRegression(C=args.C)
-        case 'RandomForest':
-            model = RandomForestClassifier(
-                n_estimators=args.n_estimators,
+        case 'DecisionTree':
+            model = DecisionTreeClassifier(
                 criterion=args.criterion,
                 max_depth=args.max_depth,
                 min_samples_split=args.min_samples_split,
                 class_weight=args.class_weight,
-                )
-        case 'SVM':
-            model = SVC(
-                C=args.C,
-                kernel=args.kernel,
-                )
+            )
+
         case 'XGBoost':
             model = xgb.XGBClassifier(
                 eta=args.eta,
@@ -65,6 +52,7 @@ def get_model(args, X_train, y_train, X_val, y_val):
                 subsample=args.subsample,
                 gamma=args.gamma,
                 reg_lambda=args.reg_lambda,
+                device='cuda' if cp.cuda.is_available() else 'cpu',
             )
         case 'LightGBM':
             model = lgb.LGBMClassifier(
@@ -75,6 +63,15 @@ def get_model(args, X_train, y_train, X_val, y_val):
                 colsample_bytree=args.colsample_bytree,
                 reg_alpha=args.reg_alpha,
                 reg_lambda=args.reg_lambda,
+                device='gpu' if cp.cuda.is_available() else 'cpu',
+            )
+        case 'CatBoost':
+            model = cb.CatBoostClassifier(
+                iterations=args.iterations,
+                learning_rate=args.learning_rate,
+                depth=args.depth,
+                l2_leaf_reg=args.l2_leaf_reg,
+                task_type='GPU' if cp.cuda.is_available() else 'CPU',
             )
         case _:
             raise ValueError('Invalid model type')
@@ -92,51 +89,52 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
         wandb.log({f'best {args.scoring_method}': best_score})
 
     def objective(trial):
-        model_types = ['XGBoost', 'LogisticRegression', 'RandomForest'] if args.model_type is None else [args.model_type]
+        model_types = ['XGBoost', 'LightGBM', 'CatBoost'] if args.model_type is None else [args.model_type]
         model_type = trial.suggest_categorical('model_type', model_types)
         match model_type:
-            case 'LogisticRegression':
+            case 'DecisionTree':
                 hparams = {
-                    'C': trial.suggest_float('C', 1e-10, 1e10, log=True),
-                    # 'class_weight': trial.suggest_categorical('class_weight_lr', ['balanced', None])
-                }
-                model = LogisticRegression()
-            case 'RandomForest':
-                hparams = {
-                    'n_estimators': trial.suggest_int('n_estimators', 10, 100),
                     'criterion': trial.suggest_categorical('criterion', ['gini', 'entropy']),
-                    'max_depth': trial.suggest_int('max_depth', 1, 10),
-                    'min_samples_split': trial.suggest_int('min_samples_split', 20, 100),
-                    'class_weight': trial.suggest_categorical('class_weight', ['balanced', 'balanced_subsample', None])
-                }
-                model = RandomForestClassifier()
-            case 'SVM':
-                hparams = {
-                    'C': trial.suggest_float('C', 1e-10, 1e10, log=True),
-                    'kernel': trial.suggest_categorical('kernel', ['linear', 'poly', 'rbf', 'sigmoid'])
-                }
-                model = SVC()
+                    'max_depth': trial.suggest_int('max_depth', 3, 10),
+                    'min_samples_split': trial.suggest_int('min_samples_split', 2, 100),
+                    'class_weight': trial.suggest_categorical('class_weight', ['balanced', 'balanced_subsample', None]),
+                    }
+                model = DecisionTreeClassifier()
             case 'XGBoost':
                 hparams = {
-                    'eta': trial.suggest_float('eta', 0.01, 0.3),
-                    'n_estimators': trial.suggest_int('n_estimators', 10, 1000),
+                    'eta': trial.suggest_float('eta', 0.001, 0.3),
+                    'n_estimators': trial.suggest_int('n_estimators', 10, 5000),
                     'max_depth': trial.suggest_int('max_depth', 3, 10),
                     'subsample': trial.suggest_float('subsample', 0.5, 1.0),
                     'gamma': trial.suggest_float('gamma', 0, 0.5),
                     'reg_lambda': trial.suggest_float('reg_lambda', 0, 2),
+                    'device': 'cuda' if cp.cuda.is_available() else 'cpu'
                     }
                 model = xgb.XGBClassifier()
             case 'LightGBM':
                 hparams = {
-                    'n_estimators': trial.suggest_int('n_estimators', 10, 1000),
-                    'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.3),
-                    'max_depth': trial.suggest_int('max_depth', 3, 10),
-                    'subsample': trial.suggest_float('subsample', 0.5, 1.0),
-                    'colsample_bytree': trial.suggest_float('colsample_bytree', 0.5, 1.0),
-                    'reg_alpha': trial.suggest_float('reg_alpha', 0, 0.1),
-                    'reg_lambda': trial.suggest_float('reg_lambda', 0, 0.1),
-                }
+                    'n_estimators': trial.suggest_int('n_estimators', 100, 5000),
+                    'learning_rate': trial.suggest_float('learning_rate', 0.001, 0.3),
+                    'max_depth': trial.suggest_int('max_depth', 3, 16),
+                    'subsample': trial.suggest_float('subsample', 0.7, 1.0),
+                    'colsample_bytree': trial.suggest_float('colsample_bytree', 0.7, 1.0),
+                    'reg_alpha': trial.suggest_float('reg_alpha', 0, 1.0),
+                    'reg_lambda': trial.suggest_float('reg_lambda', 0, 10.0),
+                    'min_child_samples': trial.suggest_int('min_child_samples', 5, 100),
+                    'device': 'gpu' if cp.cuda.is_available() else 'cpu',
+                    'verbose': -1,
+                    }
                 model = lgb.LGBMClassifier()
+            case 'CatBoost':
+                hparams = {
+                    'iterations': trial.suggest_int('iterations', 100, 5000),
+                    'learning_rate': trial.suggest_float('learning_rate', 0.001, 0.3),
+                    'depth': trial.suggest_int('depth', 3, 10),
+                    'l2_leaf_reg': trial.suggest_float('l2_leaf_reg', 0, 10),
+                    'task_type': 'GPU' if cp.cuda.is_available() else 'CPU',
+                    'verbose': 500,
+                    }
+                model = cb.CatBoostClassifier()
             case _:
                 raise ValueError('Invalid model type')
 
@@ -180,11 +178,15 @@ def main():
     X_train, y_train = SMOTE().fit_resample(X_train, y_train)
 
     
-
-    dmy_cls = DummyClassifier(strategy='most_frequent')
-    dmy_cls.fit(X_train, y_train)
-    baseline_score = compute_score(args.scoring_method, dmy_cls.predict(X_val), y_val)
+    strategies = ('most_frequent', 'stratified', 'uniform')
+    dmy_scores = []
+    for strategy in strategies:
+        dmy_cls = DummyClassifier(strategy=strategy)
+        dmy_cls.fit(X_train, y_train)
+        dmy_scores.append((compute_score(args.scoring_method, dmy_cls.predict(X_val), y_val), dmy_cls))
+    baseline_score, dmy_cls = max(dmy_scores)
     c_mat = confusion_matrix(y_val, dmy_cls.predict(X_val))
+    print(f"Baseline strategy: {dmy_cls.strategy}")
     print(f"Baseline confusion matrix:\n{c_mat}")
     print(f"Baseline score: {baseline_score}\n\n")
 

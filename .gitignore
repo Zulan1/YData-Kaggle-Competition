@@ -5,11 +5,12 @@ data/
 results/
 .vscode/
 archived_experiments/
+catboost_info/
 
 # Virtual environments
-venv/
 .env/
-.venv/
+.venv*
+venv*
 
 # Python bytecode
 __pycache__/
