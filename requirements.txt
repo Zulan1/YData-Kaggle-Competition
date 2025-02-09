@@ -9,4 +9,3 @@ xgboost
 lightgbm
 catboost
 imblearn
-cupy
