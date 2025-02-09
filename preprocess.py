@@ -6,8 +6,8 @@ import pandas as pd
 import pickle
 from app.argparser import get_preprocessing_args
 from app.helper_functions import (
-    log, save_data_for_test, save_data_for_holdout,
-    save_data_for_training, save_data_for_validation
+    log, save_data_for_test,
+    save_data_for_training, save_data_for_validation, get_data
 )
 import constants as cons
 from splitting import split_by_user
@@ -40,9 +40,8 @@ def save_transformer_to_file(transformer, file_path, verbose):
     if verbose:
         print(f"Transformer saved to {file_path}")
 
-def get_transformer(input_path: str):
+def get_transformer(transformer_path: str):
     """Load trained transformer from pickle file."""
-    transformer_path = os.path.join(input_path, cons.DEFAULT_TRANSFORMER_FILE)
     with open(transformer_path, 'rb') as f:
         return pickle.load(f)
 
@@ -51,8 +50,8 @@ def main():
     args = get_preprocessing_args()
     output_path = args.output_path
     os.makedirs(output_path, exist_ok=True)
-    df = pd.read_csv(args.input_path)
-    
+    df = get_data(args.input_path, args.verbose)
+
     if args.mode == 'train':
         df = df.drop(columns=cons.COLUMNS_TO_DROP)
         df = clean_data(df)
@@ -60,7 +59,8 @@ def main():
         df_train, transformer = preprocess_towards_training(df_train)
         df_val = preprocess_towards_evaluation(df_val, transformer)
         df_test = preprocess_towards_evaluation(df_test, transformer)
-        save_transformer_to_file(transformer, os.path.join(output_path, cons.DEFAULT_TRANSFORMER_FILE), args.verbose)
+        transformer_path = os.path.join(output_path, cons.DEFAULT_TRANSFORMER_FILE)
+        save_transformer_to_file(transformer, transformer_path, args.verbose)
         save_data_for_training(df_train, output_path)
         save_data_for_validation(df_val, output_path)
         save_data_for_test(df_test, output_path)
