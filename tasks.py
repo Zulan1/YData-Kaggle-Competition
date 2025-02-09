@@ -52,7 +52,7 @@ def echo(c, name):
 
 
 @task
-def pipeline(c):
+def pipeline(c, gpu=False):
     """Run full training pipeline:
     1. Preprocess training data
     2. Train model with RandomForest defaults
@@ -62,12 +62,15 @@ def pipeline(c):
     """
     run_id = get_timestamp_str()
     c.run(f"python preprocess.py --run-id={run_id} --output-path=./data/ --input-path=./data/ --verbose")
-    c.run(
-        f"python train.py --optuna-search "
-        f"--input-path=./data/ "
-        f"--run-id={run_id} "
-        f"--output-path=./models/ "
-    )
+    train_cmd = \
+        f"python train.py --optuna-search " \
+        f"--input-path=./data/ " \
+        f"--run-id={run_id} " \
+        f"--output-path=./models/ " \
+    
+    if gpu:
+        train_cmd += "--gpu"
+    c.run(train_cmd)
     c.run(f"python preprocess.py --test --run-id={run_id} --input-path=./data/train_dataset_full.csv --output-path=./data/ --verbose")
     c.run(f"python predict.py --run-id={run_id} --output-path=./data/ --input-path=./data/ --verbose")
     c.run(f"python result.py --run-id={run_id} --output-path=./data/ --input-path=./data/ --error-analysis")

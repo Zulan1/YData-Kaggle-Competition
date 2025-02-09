@@ -35,6 +35,7 @@ def get_train_args():
     parser.add_argument('--model-type', type=str, default=None, help='The type of model to train, or to search on if optuna_search is enabled')
     parser.add_argument('--run-id', type=str, help='Run ID')
     parser.add_argument('--output-path', type=str, default='models', help='Path to the trained model')
+    parser.add_argument('--gpu', action='store_true', help='Use GPU for training')
 
     parser.add_argument('--xgb-params', type=parse_xgb_params, default=None,
                         help='XGBoost hyperparameters, required if model-type is XGBoost\n'

@@ -5,7 +5,6 @@ import wandb
 import xgboost as xgb
 import lightgbm as lgb
 import catboost as cb
-import cupy as cp
 import pandas as pd
 import constants as cons
 from app.helper_functions import get_transformer
@@ -58,7 +57,7 @@ def get_model(args, X_train, y_train, X_val, y_val):
                 gamma = args.gamma,
                 reg_lambda = args.reg_lambda,
                 scale_pos_weight =  y_train.value_counts()[0] / y_train.value_counts()[1] if args.scale_pos_weight else 1,
-                device = 'cuda' if cp.cuda.is_available() else 'cpu',
+                device = 'cuda' if args.gpu else 'cpu',
             )
 
         case 'LightGBM':
@@ -71,7 +70,7 @@ def get_model(args, X_train, y_train, X_val, y_val):
                 reg_alpha = args.reg_alpha,
                 reg_lambda = args.reg_lambda,
                 is_balanced =  args.is_balanced,
-                device = 'gpu' if cp.cuda.is_available() else 'cpu',
+                device = 'gpu' if args.gpu else 'cpu',
             )
         case 'CatBoost':
             model = cb.CatBoostClassifier(
@@ -80,7 +79,7 @@ def get_model(args, X_train, y_train, X_val, y_val):
                 depth = args.depth,
                 l2_leaf_reg = args.l2_leaf_reg,
                 auto_class_weights = 'balanced' if args.class_weights else None,
-                task_type='GPU' if cp.cuda.is_available() else 'CPU',
+                task_type='GPU' if args.gpu else 'CPU',
             )
         case _:
             raise ValueError('Invalid model type')
@@ -121,7 +120,7 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
                     'gamma': trial.suggest_float('gamma', 0, 0.5),
                     'reg_lambda': trial.suggest_float('reg_lambda', 0, 2),
                     'scale_pos_weight': trial.suggest_categorical('scale_pos_weight', [y_train.value_counts()[0] / y_train.value_counts()[1], 1]),
-                    'device': 'cuda' if cp.cuda.is_available() else 'cpu'
+                    'device': 'cuda' if args.gpu else 'cpu'
                     }
                 model = xgb.XGBClassifier()
             case 'LightGBM':
@@ -135,7 +134,7 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
                     'reg_lambda': trial.suggest_float('reg_lambda', 0, 10.0),
                     'min_child_samples': trial.suggest_int('min_child_samples', 5, 100),
                     'is_balanced': trial.suggest_categorical('is_balanced', [True, False]),
-                    'device': 'gpu' if cp.cuda.is_available() else 'cpu',
+                    'device': 'gpu' if args.gpu else 'cpu',
                     'valid_sets': [(X_val, y_val)],
                     'verbose': -1,
                     }
@@ -146,7 +145,7 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
                     'learning_rate': trial.suggest_float('learning_rate', 0.001, 0.3, log=True),
                     'depth': trial.suggest_int('depth', 3, 10),
                     'l2_leaf_reg': trial.suggest_float('l2_leaf_reg', 0, 10),
-                    'task_type': 'GPU' if cp.cuda.is_available() else 'CPU',
+                    'task_type': 'GPU' if args.gpu else 'CPU',
                     'verbose': 500,
                     }
                 auto_class_weights = trial.suggest_categorical('auto_class_weights', ['Balanced', None]),
@@ -171,7 +170,6 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
     study = optuna.create_study(directions=['maximize', 'maximize', 'maximize', 'maximize'])
     study.optimize(objective, n_trials=args.n_trials, callbacks=[log_score])
     print(f"Finished {args.n_trials} found best params: {study.best_params}, with score: {study.best_value}.")
-    os.makedirs('plots', exist_ok=True)
     return study.best_trials[0].params
 
 
