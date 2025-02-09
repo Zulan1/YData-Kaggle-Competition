@@ -1,4 +1,13 @@
-from sklearn.metrics import f1_score, matthews_corrcoef, balanced_accuracy_score, roc_auc_score, precision_recall_curve, auc
+from sklearn.metrics import (
+    f1_score,
+    matthews_corrcoef,
+    balanced_accuracy_score,
+    precision_score,
+    recall_score,
+    roc_auc_score,
+    precision_recall_curve,
+    auc
+    )
 
 def compute_score(option, y_true, y_pred, y_proba=None) -> float:
     """Compute the score of the model on the test/validation set.
@@ -35,6 +44,12 @@ def compute_score(option, y_true, y_pred, y_proba=None) -> float:
             raise ValueError("AUPRC requires predicted probabilities (y_proba) to be passed.")
         precision, recall, _ = precision_recall_curve(y_true, y_proba)
         test_score = auc(recall, precision)
+    
+    elif option == 'precision':
+        test_score = precision_score(y_true, y_pred)
+    
+    elif option == 'recall':
+        test_score = recall_score(y_true, y_pred)
 
     elif option.startswith('f-'):
         beta = float(option.split('-')[1])

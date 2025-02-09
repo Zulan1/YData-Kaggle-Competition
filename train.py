@@ -17,6 +17,7 @@ from imblearn.over_sampling import SMOTE
 from sklearn.dummy import DummyClassifier
 from sklearn.metrics import confusion_matrix
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.preprocessing import PolynomialFeatures
 
 
 from app.metrics import compute_score
@@ -45,7 +46,7 @@ def get_model(args, X_train, y_train, X_val, y_val):
                 criterion = args.criterion,
                 max_depth = args.max_depth,
                 min_samples_split = args.min_samples_split,
-                class_weight =  'balanced' if args.class_weight else None,
+                class_weight = 'balanced' if args.class_weight else None,
             )
 
         case 'XGBoost':
@@ -59,6 +60,7 @@ def get_model(args, X_train, y_train, X_val, y_val):
                 scale_pos_weight =  y_train.value_counts()[0] / y_train.value_counts()[1] if args.scale_pos_weight else 1,
                 device = 'cuda' if cp.cuda.is_available() else 'cpu',
             )
+
         case 'LightGBM':
             model = lgb.LGBMClassifier(
                 n_estimators = args.n_estimators,
@@ -87,13 +89,16 @@ def get_model(args, X_train, y_train, X_val, y_val):
 
 
 def hyperparameter_search(X_train, y_train, X_val, y_val, args):
-    best_score = 0
 
     def log_score(study, trial):
-        nonlocal best_score
-        if trial.value > best_score:
-            best_score = trial.value
-        wandb.log({f'best {args.scoring_method}': best_score})
+        val_score, val_precision, val_recall, train_score = study.best_trials[0].values
+        log_msg = {
+            f'best val {args.scoring_method}': val_score,
+            'best val precision': val_precision,
+            'best val recall': val_recall,
+            f'best train {args.scoring_method}': train_score,
+        }
+        wandb.log(log_msg)
 
     def objective(trial):
         model_types = ['XGBoost', 'LightGBM', 'CatBoost'] if args.model_type is None else [args.model_type]
@@ -104,13 +109,10 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
                     'criterion': trial.suggest_categorical('criterion', ['gini', 'entropy']),
                     'max_depth': trial.suggest_int('max_depth', 3, 10),
                     'min_samples_split': trial.suggest_int('min_samples_split', 2, 100),
-                    'class_weight': trial.suggest_categorical('class_weight', ['balanced', 'balanced_subsample', None]),
+                    'class_weight': trial.suggest_categorical('class_weight', ['balanced', 'balanced_subsample']),
                     }
                 model = DecisionTreeClassifier()
-                model.set_params(**hparams)
-                model.fit(X_train, y_train)
             case 'XGBoost':
-                train_data = xgb.DMatrix(X_train, label=y_train)
                 hparams = {
                     'eta': trial.suggest_float('eta', 0.001, 0.3, log=True),
                     'n_estimators': trial.suggest_int('n_estimators', 10, 5000, log=True),
@@ -122,12 +124,7 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
                     'device': 'cuda' if cp.cuda.is_available() else 'cpu'
                     }
                 model = xgb.XGBClassifier()
-                model.fit(
-                    params=hparams,
-                    dataset=train_data,
-                )
             case 'LightGBM':
-                train_data = lgb.Dataset(X_train, label=y_train)
                 hparams = {
                     'n_estimators': trial.suggest_int('n_estimators', 100, 5000, log=True),
                     'learning_rate': trial.suggest_float('learning_rate', 0.001, 0.3, log=True),
@@ -143,10 +140,6 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
                     'verbose': -1,
                     }
                 model = lgb.LGBMClassifier()
-                model.fit(
-                    params=hparams,
-                    train_set=train_data,
-                )
             case 'CatBoost':
                 hparams = {
                     'iterations': trial.suggest_int('iterations', 100, 5000, log=True),
@@ -160,64 +153,32 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
                 if auto_class_weights == 'Balanced':
                     hparams['auto_class_weights'] = 'Balanced'
                 model = cb.CatBoostClassifier()
-                model.fit(
-                    X_train, y_train,
-                    eval_set=(X_val, y_val),
-                    **hparams
-                )
             case _:
                 raise ValueError('Invalid model type')
 
         print(f"\n\nStarted trial {trial.number} with params: {trial.params}.")
-        # model.set_params(**hparams)
-        # model.fit(X_train, y_train)
+        model.set_params(**hparams)
+        model.fit(X_train, y_train)
         y_pred = model.predict(X_val)
         print(f"{(y_pred == 1).sum()} out of {len(y_pred)} are 1")
-        score = compute_score(args.scoring_method, y_val, y_pred)
+        train_score = compute_score(args.scoring_method, y_val, y_pred)
+        val_score = compute_score(args.scoring_method, y_val, y_pred)
+        val_precision = compute_score('precision', y_val, y_pred)
+        val_recall = compute_score('recall', y_val, y_pred)
 
-        return score
+        return val_score, val_precision, val_recall, train_score
 
-    study = optuna.create_study(direction='maximize')
+    study = optuna.create_study(directions=['maximize', 'maximize', 'maximize', 'maximize'])
     study.optimize(objective, n_trials=args.n_trials, callbacks=[log_score])
     print(f"Finished {args.n_trials} found best params: {study.best_params}, with score: {study.best_value}.")
     os.makedirs('plots', exist_ok=True)
-    # optuna.visualization.plot_optimization_history(study).write_image('plots/optuna_history.png')
-    # optuna.visualization.plot_param_importances(study).write_image('plots/optuna_importances.png')
-    return study.best_params
-
-def enforce_smote(X, transformer):
-    # Get categorical columns from transformer
-    one_hot_groups = []
-    print(X.columns)
-
-    # Group one-hot encoded columns correctly
-    for category in cons.COLUMNS_TO_OHE:
-        group = [col for col in X.columns if col.startswith(f"{category}_")]
-        one_hot_groups.append(group)
-    
-    print(one_hot_groups)
-    
-    for col_group in one_hot_groups:
-        # For each group of one-hot columns, ensure exactly one 1 per row
-        group_data = X[col_group]
-        max_cols = group_data.idxmax(axis=1)
-        
-        # Set all columns in group to 0, then set max column to 1
-        X[col_group] = 0
-        for row_idx, col in enumerate(max_cols):
-            X.at[row_idx, col] = 1
-    return X
-
+    return study.best_trials[0].params
 
 
 def main():
     args = get_train_args()
 
     input_path = args.input_path
-    run_id = args.run_id
-    transformer = get_transformer(input_path)
-
-
     
     train_path = os.path.join(input_path, cons.DEFAULT_TRAIN_SET_FILE)
     val_path = os.path.join(input_path, cons.DEFAULT_VAL_SET_FILE)
@@ -227,10 +188,8 @@ def main():
     X_train, y_train = split_dataset_Xy(df_train)
     X_val, y_val = split_dataset_Xy(df_val)
 
-    # X_train, y_train = SMOTE().fit_resample(X_train, y_train)
 
-
-        strategies = ('most_frequent', 'stratified', 'uniform')
+    strategies = ('most_frequent', 'stratified', 'uniform')
     dmy_scores = []
     for strategy in strategies:
         dmy_cls = DummyClassifier(strategy=strategy)
@@ -246,6 +205,7 @@ def main():
         project='ydata-kaggle-competition',
         config=args,
         )
+    
 
     model = get_model(args, X_train, y_train, X_val, y_val)
     model.fit(X_train, y_train)

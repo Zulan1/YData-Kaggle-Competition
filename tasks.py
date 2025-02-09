@@ -61,7 +61,7 @@ def pipeline(c):
     5. Analyze results
     """
     run_id = get_timestamp_str()
-    c.run(f"python preprocess.py --run-id={run_id} --output-path=./data/ --input-path=./data/train_dataset_full.csv --verbose")
+    c.run(f"python preprocess.py --run-id={run_id} --output-path=./data/ --input-path=./data/ --verbose")
     c.run(
         f"python train.py --optuna-search "
         f"--input-path=./data/ "
@@ -82,12 +82,22 @@ def external_pipeline(c):
     4. Analyze results
     """
     run_id = get_timestamp_str()
-    c.run(f"python preprocess.py --mode=train --run-id={run_id} --input-path=./data/train_dataset_full.csv --output-path=./data/ --verbose")
+    c.run(f"python preprocess.py --mode=train --run-id={run_id} --input-path=./data/ --output-path=./data/ --verbose")
     c.run(
-        f"python train.py --optuna-search "
-        f"--input-path ./data/"
-        f"--run-id {run_id} "
-        f"--output-path ./models/ "
+        "python train.py "
+        "model-type=XGBoost "
+        "--xgb-params='["
+            "100," # n_estimators
+            "0.1," # learning_rate
+            "6," # max_depth
+            "0.6," # subsample
+            "0.6," # gamma
+            "1," # reg_lambda
+            "scale_pos_weight=True" # is_balanced
+        "]'"
+        "--input-path ./data/"
+        "--run-id {run_id} "
+        "--output-path ./models/ "
     )
     c.run(f"python preprocess.py --mode=test --run-id={run_id} --input-path=./data/--output-path=./data/ --verbose")
     c.run(f"python predict.py --run-id={run_id} --output-path=./data/ --input-path=./data/ --verbose")

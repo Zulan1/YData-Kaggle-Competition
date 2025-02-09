@@ -2,7 +2,7 @@ import argparse
 import constants as cons
 
 def parse_xgb_params(params):
-    keys = ['eta', 'n_estimators', 'max_depth', 'subsample', 'gamma', 'reg_lambda']
+    keys = ['n_estimators', 'eta', 'max_depth', 'subsample', 'gamma', 'reg_lambda']
     if len(params) != len(keys):    
         raise ValueError(f'Expected {len(keys)} hyperparameters, got {len(params)}')
     return {k: params[k] for k in keys}
@@ -39,8 +39,8 @@ def get_train_args():
     parser.add_argument('--xgb-params', type=parse_xgb_params, default=None,
                         help='XGBoost hyperparameters, required if model-type is XGBoost\n'
                         'Expected keys:\n'
-                        'eta - learning rate\n'
                         'n_estimators - number of trees\n'
+                        'eta - learning rate\n'
                         'max_depth - maximum depth of each tree\n'
                         'subsample - fraction of samples used for fitting each tree\n'
                         'gamma - minimum loss reduction required to make a further partition\n'
