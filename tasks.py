@@ -68,6 +68,7 @@ def pipeline(c, n_trials=100, gpu=False):
         f"--run-id={run_id} " \
         f"--n-trials={n_trials} " \
         f"--output-path=./data/ " \
+        f"--scoring-method=auprc"
     
     if gpu:
         train_cmd += "--gpu"
