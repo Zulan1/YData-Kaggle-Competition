@@ -46,10 +46,10 @@ def compute_score(option, y_true, y_pred, y_proba=None) -> float:
         test_score = auc(recall, precision)
     
     elif option == 'precision':
-        test_score = precision_score(y_true, y_pred)
+        test_score = precision_score(y_true, y_pred, zero_division=0)
     
     elif option == 'recall':
-        test_score = recall_score(y_true, y_pred)
+        test_score = recall_score(y_true, y_pred, zero_division=0)
 
     elif option.startswith('f-'):
         beta = float(option.split('-')[1])

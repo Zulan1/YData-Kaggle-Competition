@@ -7,16 +7,13 @@ import lightgbm as lgb
 import catboost as cb
 import pandas as pd
 import constants as cons
-from app.helper_functions import get_transformer
 
 import pandas as pd
 
 
-from imblearn.over_sampling import SMOTE
 from sklearn.dummy import DummyClassifier
 from sklearn.metrics import confusion_matrix
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.preprocessing import PolynomialFeatures
 
 
 from app.metrics import compute_score
@@ -90,13 +87,16 @@ def get_model(args, X_train, y_train, X_val, y_val):
 def hyperparameter_search(X_train, y_train, X_val, y_val, args):
 
     def log_score(study, trial):
-        val_score, val_precision, val_recall, train_score = study.best_trials[0].values
+        best_trial = max(study.best_trials, key=lambda t: t.values[0])
+        val_score, val_precision, val_recall, train_score = best_trial.values
         log_msg = {
             f'best val {args.scoring_method}': val_score,
             'best val precision': val_precision,
             'best val recall': val_recall,
             f'best train {args.scoring_method}': train_score,
         }
+        print(f"Finished trial {trial.number} with score {trial.values}\n"
+              f"Best is trial {best_trial.number} with score {best_trial.values}.")
         wandb.log(log_msg)
 
     def objective(trial):
@@ -112,6 +112,7 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
                     }
                 model = DecisionTreeClassifier()
             case 'XGBoost':
+                class_ratio = y_train.value_counts()[0] / y_train.value_counts()[1]
                 hparams = {
                     'eta': trial.suggest_float('eta', 0.001, 0.3, log=True),
                     'n_estimators': trial.suggest_int('n_estimators', 10, 5000, log=True),
@@ -119,7 +120,7 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
                     'subsample': trial.suggest_float('subsample', 0.5, 1.0),
                     'gamma': trial.suggest_float('gamma', 0, 0.5),
                     'reg_lambda': trial.suggest_float('reg_lambda', 0, 2),
-                    'scale_pos_weight': trial.suggest_categorical('scale_pos_weight', [y_train.value_counts()[0] / y_train.value_counts()[1], 1]),
+                    'scale_pos_weight': trial.suggest_categorical('scale_pos_weight', [class_ratio, 1]),
                     'device': 'cuda' if args.gpu else 'cpu'
                     }
                 model = xgb.XGBClassifier()
@@ -169,7 +170,7 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
 
     study = optuna.create_study(directions=['maximize', 'maximize', 'maximize', 'maximize'])
     study.optimize(objective, n_trials=args.n_trials, callbacks=[log_score])
-    best_trial = study.best_trials[0]
+    best_trial = max(study.best_trials, key=lambda t: t.values[0])
     print(f"Finished {args.n_trials} found best params: {best_trial.params}, with score: {best_trial.values[0]}.")
     return best_trial.params
 

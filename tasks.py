@@ -78,7 +78,7 @@ def pipeline(c, n_trials=100, gpu=False):
 
 
 @task
-def external_pipeline(c):
+def debug_pipeline(c):
     """Run pipeline on external test data:
     1. Preprocess test data
     2. Generate predictions
@@ -100,7 +100,7 @@ def external_pipeline(c):
             "scale_pos_weight=True" # is_balanced
         "]'"
         "--input-path ./data/"
-        "--run-id {run_id} "
+        f"--run-id {run_id} "
         "--output-path ./models/ "
     )
     c.run(f"python preprocess.py --mode=test --run-id={run_id} --input-path=./data/--output-path=./data/ --verbose")
