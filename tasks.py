@@ -61,7 +61,7 @@ def pipeline(c, gpu=False):
     5. Analyze results
     """
     run_id = get_timestamp_str()
-    c.run(f"python preprocess.py --run-id={run_id} --output-path=./data/ --input-path=./data/ --verbose")
+    c.run(f"python preprocess.py --mode=train --run-id={run_id} --output-path=./data/ --input-path=./data/ --verbose")
     train_cmd = \
         f"python train.py --optuna-search " \
         f"--input-path=./data/ " \
@@ -71,7 +71,7 @@ def pipeline(c, gpu=False):
     if gpu:
         train_cmd += "--gpu"
     c.run(train_cmd)
-    c.run(f"python preprocess.py --test --run-id={run_id} --input-path=./data/train_dataset_full.csv --output-path=./data/ --verbose")
+    c.run(f"python preprocess.py --mode=test --run-id={run_id} --input-path=./data/preprocess_{run_id}/ --output-path=./data/ --verbose")
     c.run(f"python predict.py --run-id={run_id} --output-path=./data/ --input-path=./data/ --verbose")
     c.run(f"python result.py --run-id={run_id} --output-path=./data/ --input-path=./data/ --error-analysis")
 
@@ -85,7 +85,7 @@ def external_pipeline(c):
     4. Analyze results
     """
     run_id = get_timestamp_str()
-    c.run(f"python preprocess.py --mode=train --run-id={run_id} --input-path=./data/ --output-path=./data/ --verbose")
+    c.run(f"python preprocess.py --mode=train --run-id={run_id} --input-path=./data/train_dataset_full.csv --output-path=./data/ --verbose")
     c.run(
         "python train.py "
         "model-type=XGBoost "
