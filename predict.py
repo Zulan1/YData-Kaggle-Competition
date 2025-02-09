@@ -5,11 +5,6 @@ import constants as cons
 import os
 from app.helper_functions import log
 
-def get_model(input_path: str, run_id: str):
-    """Load trained model from pickle file."""
-    model_path = os.path.join(input_path, f"train_{run_id}/{cons.DEFAULT_MODEL_FILE}")
-    with open(model_path, 'rb') as f:
-        return pickle.load(f)
 
 def get_data(input_path: str, run_id: str) -> pd.DataFrame:
     """Load preprocessed test data."""
@@ -22,7 +17,8 @@ def main():
     verbose = args.verbose
 
     log("Loading model", verbose)
-    model = get_model(args.input_path, run_id)
+    with open(args.model_path, 'rb') as p:
+        model = pickle.load(p)
     log(f"Model type: {model.__class__.__name__}", verbose)
     
     log(f"Loading data from {args.input_path}", verbose)

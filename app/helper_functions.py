@@ -60,90 +60,11 @@ def log(message: str, verbose: bool, level="INFO"):
         level (str): The log level (e.g., INFO, ERROR). Default is "INFO".
     """
     if verbose:
-        print(f"{datetime.now().isoformat()} [{level}] {message}")    
-
-'''
-def clean_data(df):
-    #1. Remove duplicates
-    df = df.drop_duplicates()
-    #2. Drop columns with high percentage of missing values
-    df = df.drop(columns=cons.COLUMNS_TO_DROP)
-    #3. Drop all rows with missing values
-    df = df.dropna()
-
-    #4. Convert DateTime into DateTime object and sort by DateTime so data is chronological:
-    df[cons.DATETIME_COLUMN] = pd.to_datetime(df[cons.DATETIME_COLUMN], errors='coerce')
-    if df[cons.DATETIME_COLUMN].isna().any():
-        raise ValueError("Invalid DateTime entries found during preprocessing.")
-    #df = df.sort_values('DateTime')
-
-    #5. Extract hour and weekday features from DateTime column and drop the original DateTime
-    df['hour'] = df[cons.DATETIME_COLUMN].dt.hour
-    df['hour_sin'] = np.sin(2 * np.pi * df['hour'] / 24)
-    df['hour_cos'] = np.cos(2 * np.pi * df['hour'] / 24)
-    df['day_of_week'] = df[cons.DATETIME_COLUMN].dt.dayofweek # Monday=0, Tuesday=1, Wednesday=2, Thursday=3, Friday=4, Saturday=5, Sunday=6
-    
-    # Drop raw hour column - create instead function for feature selection
-    df = df.drop(columns=["hour"]) 
-    
-    return df
-'''
-
-
-
-def remove_duplicates(df: pd.DataFrame) -> pd.DataFrame:
-    """Remove duplicate rows from the DataFrame."""
-    return df.drop_duplicates()
+        print(f"{datetime.now().isoformat()} [{level}] {message}")
 
 def drop_high_missing_columns(df: pd.DataFrame, columns_to_drop: list) -> pd.DataFrame:
     """Drop columns with a high percentage of missing values."""
     return df.drop(columns=columns_to_drop, errors="ignore")
-
-def drop_missing_values(df: pd.DataFrame) -> pd.DataFrame:
-    """Drop all rows with missing values."""
-    return df.dropna()
-
-
-
-def process_datetime(df: pd.DataFrame, datetime_column: str = cons.DATETIME_COLUMN) -> pd.DataFrame:
-    """Convert DateTime column to a proper datetime object and validate entries.
-    
-    Args:
-        df: Input DataFrame
-        datetime_column: Name of datetime column
-        
-    Returns:
-        DataFrame with processed datetime column
-    """
-    if datetime_column not in df.columns:
-        return df
-        
-    df[datetime_column] = pd.to_datetime(df[datetime_column], errors="coerce")
-    # Drop rows where datetime conversion failed
-    return df
-
-def extract_time_features(df: pd.DataFrame, datetime_column: str = cons.DATETIME_COLUMN) -> pd.DataFrame:
-    """Extract time-based features from datetime column.
-    
-    Args:
-        df: Input DataFrame
-        datetime_column: Name of datetime column
-        
-    Returns:
-        DataFrame with additional time features
-    """
-    if datetime_column not in df.columns:
-        return df
-        
-    if not pd.api.types.is_datetime64_any_dtype(df[datetime_column]):
-        df = process_datetime(df, datetime_column)
-        
-    hour = df[datetime_column].dt.hour
-    df['hour_sin'] = np.sin(2 * np.pi * hour / 24)
-    df['hour_cos'] = np.cos(2 * np.pi * hour / 24)
-    df['day_of_week'] = df[datetime_column].dt.dayofweek
-    return df
-
 
 def split_dataset_Xy(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Split dataset into features (X) and target (y)."""
@@ -163,7 +84,9 @@ def combine_Xy(X: pd.DataFrame, y : pd.DataFrame) -> pd.DataFrame:
     return pd.concat([X, y], axis=1)
 
 def save_data_for_test(df, output_path):
-    df.to_csv(os.path.join(output_path, cons.DEFAULT_TEST_SET_FILE), index=False)
+    X_test, y_test = split_dataset_Xy(df)
+    X_test.to_csv(os.path.join(output_path, cons.DEFAULT_TEST_FEATURES_FILE), index=False)
+    y_test.to_csv(os.path.join(output_path, cons.DEFAULT_TEST_LABELS_FILE), index=False)
     return
 
 def align_columns(df, all_columns):
@@ -207,38 +130,6 @@ def encode_data(train: pd.DataFrame, val: pd.DataFrame, test: pd.DataFrame, cate
     test_encoded =  combined.iloc[len(train) + len(val):].reindex(columns=combined.columns)
     
     return train_encoded, val_encoded, test_encoded
-
-
-
-# def load_training_data(path: str = cons.DATA_PATH, 
-#                        train_fn: str = cons.DEFAULT_TRAIN_SET_FILE, 
-#                        val_fn: str = cons.DEFAULT_VAL_SET_FILE, 
-#                        holdout_fn: str = cons.DEFAULT_HOLDOUT_FILE,
-#                        run_id: str = None) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-#     """
-#     Load the train, validation, and test sets from CSV files.
-# 
-#     Args:
-#         path (str):     The path to load the CSV files. Default is 'data/'.    
-#         train_fn (str): The filename for the training set. Default is 'train.csv'.
-#         val_fn (str):   The filename for the validation set. Default is 'val.csv'.
-#         test_fn (str):  The filename for the test set. Default is 'test.csv'.
-# 
-#     Returns:
-#         Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]: The training, validation, and test sets as DataFrames.
-#     """
-#     # Load train, validation, and test sets
-# 
-#     if run_id is None:
-#         prefix = ""
-#     else:
-#         prefix = f"preprocess_{run_id}/"
-# 
-#     train = pd.read_csv(f'{path}{prefix + cons.DEFAULT_TRAIN_SET_FILE}')
-#     val = pd.read_csv(f'{path}{prefix + cons.DEFAULT_VAL_SET_FILE}')
-#     holdout = pd.read_csv(f'{path}{prefix + cons.DEFAULT_HOLDOUT_FILE}') 
-#     return train, val, holdout
-
 
 def log(message: str, verbose: bool, level: str = "INFO") -> None:
     """Log a message if verbose is True."""

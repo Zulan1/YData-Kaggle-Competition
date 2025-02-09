@@ -46,41 +46,36 @@ def get_transformer(input_path: str):
     with open(transformer_path, 'rb') as f:
         return pickle.load(f)
 
-def get_data(input_path, mode):
-    if mode == 'train':
-        data_path = os.path.join(input_path, cons.DEFAULT_INTERNAL_DATA_FILE)
-    else:
-        data_path = os.path.join(input_path, cons.DEFAULT_HOLDOUT_FEATURES_FILE)
-    df = pd.read_csv(data_path)
-    if df.empty:
-        raise ValueError("The input file is empty.")
-    return df
 
 def main():
     args = get_preprocessing_args()
-    output_path = os.path.join(args.output_path, f"preprocess_{args.run_id}")
+    output_path = args.output_path
     os.makedirs(output_path, exist_ok=True)
-    df = get_data(args.input_path, args.mode)
+    df = pd.read_csv(args.input_path)
     
     if args.mode == 'train':
         df = df.drop(columns=cons.COLUMNS_TO_DROP)
         df = clean_data(df)
-        df_train, df_val, df_holdout = split_by_user(df)
+        df_train, df_val, df_test = split_by_user(df)
         df_train, transformer = preprocess_towards_training(df_train)
         df_val = preprocess_towards_evaluation(df_val, transformer)
+        df_test = preprocess_towards_evaluation(df_test, transformer)
         save_transformer_to_file(transformer, os.path.join(output_path, cons.DEFAULT_TRANSFORMER_FILE), args.verbose)
         save_data_for_training(df_train, output_path)
         save_data_for_validation(df_val, output_path)
-        save_data_for_holdout(df_holdout, output_path)
+        save_data_for_test(df_test, output_path)
 
         if args.verbose:
             print(f"Saved preprocessed data to {output_path}")
     
-    else:
-        transformer = get_transformer(args.input_path)
+    elif args.mode == 'test':
+        transformer = get_transformer(args.transformer_path)
         df = preprocess_towards_evaluation(df, transformer)
         save_data_for_test(df, output_path)
         log(f"Test set saved to {output_path}.", args.verbose)
+
+    else:
+        raise ValueError("Invalid mode.")
 
 if __name__ == '__main__':
     main()

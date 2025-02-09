@@ -1,3 +1,4 @@
+import constants as cons
 from invoke import task
 from app.time_utils import get_timestamp_str
 
@@ -61,20 +62,31 @@ def pipeline(c, n_trials=100, gpu=False):
     5. Analyze results
     """
     run_id = get_timestamp_str()
-    c.run(f"python preprocess.py --mode=train --run-id={run_id} --output-path=./data/ --input-path=./data/ --verbose")
-    train_cmd = \
-        f"python train.py --optuna-search " \
-        f"--input-path=./data/ " \
-        f"--run-id={run_id} " \
-        f"--n-trials={n_trials} " \
-        f"--output-path=./data/ " \
-    
-    if gpu:
-        train_cmd += "--gpu"
-    c.run(train_cmd)
-    c.run(f"python preprocess.py --mode=test --run-id={run_id} --input-path=./data/preprocess_{run_id}/ --output-path=./data/ --verbose")
-    c.run(f"python predict.py --run-id={run_id} --output-path=./data/ --input-path=./data/ --verbose")
-    c.run(f"python result.py --run-id={run_id} --output-path=./data/ --input-path=./data/ --error-analysis")
+    c.run(
+        "python preprocess.py"
+        "--mode=train"
+        f"--output-path=./data/preprocess_{run_id}"
+        f"--input-path=./data/{cons.DEFAULT_INTERNAL_DATA_FILE}"
+        "--verbose"
+        )
+
+    c.run(
+        f"python train.py --optuna-search "
+        f"--input-path=./data/preprocess_{run_id}/ "
+        f"--run-id={run_id} "
+        f"--n-trials={n_trials} "
+        f"--output-path=./data/train_{run_id}/ "
+        f"{'--gpu' if gpu else ''}"
+        )
+
+    c.run(
+        f"python predict.py"
+        f"--model-path=./data/train_{run_id}/model.pkl"
+        f"--input-path=./data/preprocess_{run_id}/{cons.DEFAULT_TEST_FEATURES_FILE}"
+        f"--output-path=./data/predictions_{run_id}/"
+        "--verbose"
+        )
+    c.run(f"python result.py --output-path=./data/ --input-path=./data/ --error-analysis")
 
 
 @task
@@ -106,3 +118,26 @@ def debug_pipeline(c):
     c.run(f"python preprocess.py --mode=test --run-id={run_id} --input-path=./data/--output-path=./data/ --verbose")
     c.run(f"python predict.py --run-id={run_id} --output-path=./data/ --input-path=./data/ --verbose")
     c.run(f"python result.py --run-id={run_id} --output-path=./data/ --input-path=./data/")
+
+
+@task
+def inference_pipeline(c, transformer_path, model_path):
+    run_id = get_timestamp_str()
+    c.run(
+            "python preprocess.py "
+            "--mode=test "
+            f"--run-id={run_id} "
+            "--input-path=./data/ "
+            "--output-path=./data/ "
+            f"--transformer-path={transformer_path} "
+            "--verbose "
+        )
+
+    c.run(
+            f"python predict.py "
+            f"--run-id={run_id} "
+            "--input-path=./data/ "
+            "--output-path=./data/ "
+            f"--model-path={model_path} "
+            "--verbose "
+        )

@@ -217,7 +217,7 @@ def main():
     print(f"Final score: {score}")
 
     
-    output_path = f'{args.output_path}/train_{args.run_id}'
+    output_path = args.output_path
     os.makedirs(output_path, exist_ok=True)
     with open(f'{output_path}/model.pkl', 'wb') as p:
         pickle.dump(model, p)

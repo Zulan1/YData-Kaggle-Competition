@@ -33,7 +33,6 @@ def get_train_args():
     parser.add_argument('--n-trials', type=int, default=100, help='number of trials for hyperparameter search')
     parser.add_argument('--scoring-method', type=str, default='f1', help='The metric to use for evaluation')
     parser.add_argument('--model-type', type=str, default=None, help='The type of model to train, or to search on if optuna_search is enabled')
-    parser.add_argument('--run-id', type=str, help='Run ID')
     parser.add_argument('--output-path', type=str, default='models', help='Path to the trained model')
     parser.add_argument('--gpu', action='store_true', help='Use GPU for training')
 
@@ -90,7 +89,7 @@ def get_preprocessing_args():
     parser.add_argument('--output-path', type=str, help='Output directory of all proccessed csv files: train, val, test')
     parser.add_argument('--verbose', action='store_true', help='Print additional information')
     parser.add_argument('--mode', type=str, default='train', help='Mode: train, test')
-    parser.add_argument('--run-id', type=str, help='Run ID')
+    parser.add_argument('--transformer-path', type=str, help='Path to transformer file')
 
     return parser.parse_args()
 
@@ -100,7 +99,7 @@ def get_predict_args():
     parser.add_argument('--input-path', type=str, required=True, help='Path to input data for prediction')
     parser.add_argument('--output-path', type=str, help='Path to output data for prediction')
     parser.add_argument('--verbose', action='store_true', help='Print additional information')
-    parser.add_argument('--run-id', type=str, help='Run ID')
+    parser.add_argument('--model-path', type=str, help='path of the model to use for prediction')
     return parser.parse_args()
 
 def get_result_args():
@@ -108,6 +107,5 @@ def get_result_args():
     parser.add_argument('--input-path', type=str, required=True, help='Path to predictions file')
     parser.add_argument('--output-path', type=str, required=True, help='Path to results file')
     parser.add_argument('--verbose', action='store_true', help='Print additional information')
-    parser.add_argument('--run-id', type=str, help='Run ID')
     parser.add_argument('--error-analysis', action='store_true', help='Analyze test set')
     return parser.parse_args()
