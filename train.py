@@ -161,8 +161,9 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
         model.fit(X_train, y_train)
         y_pred = model.predict(X_val)
         print(f"{(y_pred == 1).sum()} out of {len(y_pred)} are 1")
-        train_score = compute_score(args.scoring_method, y_val, y_pred)
-        val_score = compute_score(args.scoring_method, y_val, y_pred)
+        y_proba = model.predict_proba(X_val)[:, 1]
+        train_score = compute_score(args.scoring_method, y_val, y_pred, y_proba)
+        val_score = compute_score(args.scoring_method, y_val, y_pred, y_proba)
         val_precision = compute_score('precision', y_val, y_pred)
         val_recall = compute_score('recall', y_val, y_pred)
 
@@ -195,7 +196,8 @@ def main():
     for strategy in strategies:
         dmy_cls = DummyClassifier(strategy=strategy)
         dmy_cls.fit(X_train, y_train)
-        dmy_scores.append((compute_score(args.scoring_method, dmy_cls.predict(X_val), y_val), dmy_cls))
+        y_proba = dmy_cls.predict_proba(X_val)[:, 1]
+        dmy_scores.append((compute_score(args.scoring_method, dmy_cls.predict(X_val), y_val, y_proba), dmy_cls))
     baseline_score, dmy_cls = max(dmy_scores)
     c_mat = confusion_matrix(y_val, dmy_cls.predict(X_val))
     print(f"Baseline strategy: {dmy_cls.strategy}")
@@ -211,7 +213,9 @@ def main():
     model = get_model(args, X_train, y_train, X_val, y_val)
     model.fit(X_train, y_train)
     predictions = model.predict(X_val)
-    score = compute_score(args.scoring_method, y_val, predictions)
+    y_proba = model.predict_proba(X_val)[:, 1]
+    print(y_proba)
+    score = compute_score(args.scoring_method, y_val, predictions, y_proba)
     print(confusion_matrix(y_val, predictions))
     wandb.log({args.scoring_method: score})
     print(f"Final score: {score}")
