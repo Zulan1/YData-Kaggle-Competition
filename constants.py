@@ -5,7 +5,6 @@ DEFAULT_EXTERNAL_RAW_TEST_FILE = 'X_test_1st_raw.csv'
 
 DEFAULT_TRAIN_SET_FILE = 'train.csv'
 DEFAULT_VAL_SET_FILE = 'val.csv'
-
 DEFAULT_TEST_FEATURES_FILE = 'test_features.csv'
 DEFAULT_TEST_LABELS_FILE = 'test_labels.csv'
 
