@@ -7,6 +7,7 @@ import xgboost as xgb
 import lightgbm as lgb
 import constants as cons
 from app.helper_functions import get_transformer
+from app.file_manager import save_model
 
 import pandas as pd
 
@@ -44,7 +45,7 @@ def get_model(args, X_train, y_train, X_val, y_val):
     model_type = args.model_type
     match model_type:
         case 'LogisticRegression':
-            model = LogisticRegression(C=args.C)
+            model = LogisticRegression(C=args.lr_params['C'])
         case 'RandomForest':
             model = RandomForestClassifier(
                 n_estimators=args.n_estimators,
@@ -52,6 +53,7 @@ def get_model(args, X_train, y_train, X_val, y_val):
                 max_depth=args.max_depth,
                 min_samples_split=args.min_samples_split,
                 class_weight=args.class_weight,
+                max_features=args.max_features,
                 )
         case 'SVM':
             model = SVC(
@@ -66,6 +68,7 @@ def get_model(args, X_train, y_train, X_val, y_val):
                 subsample=args.subsample,
                 gamma=args.gamma,
                 reg_lambda=args.reg_lambda,
+                scale_pos_weight=args.scale_pos_weight,
             )
         case 'LightGBM':
             model = lgb.LGBMClassifier(
@@ -181,7 +184,7 @@ def main():
     # X_val.drop(columns=['DateTime', 'user_id', 'session_id'], inplace=True)
     # X_train = X_train[selected_columns]
     # X_val = X_val[selected_columns]
-   # X_train, y_train = SMOTE().fit_resample(X_train, y_train)
+    X_train, y_train = SMOTE().fit_resample(X_train, y_train)
    # X_train = enforce_smote(X_train, transformer)
 
 
@@ -207,10 +210,9 @@ def main():
     print(f"Final score: {score}")
 
     
-    output_path = f'{args.output_path}/train_{args.run_id}'
+    output_path = args.output_path
     os.makedirs(output_path, exist_ok=True)
-    with open(f'{output_path}/model.pkl', 'wb') as p:
-        pickle.dump(model, p)
+    save_model(model, output_path)
 
 
             

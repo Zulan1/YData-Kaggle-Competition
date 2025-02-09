@@ -2,10 +2,13 @@ import argparse
 import constants as cons
 
 def parse_xgb_params(params):
-    keys = ['n_estimators', 'eta', 'max_depth', 'subsample', 'gamma', 'reg_lambda']
+    keys = ['n_estimators', 'eta', 'max_depth', 'subsample', 'gamma', 'reg_lambda', 'scale_pos_weight']
     if len(params) != len(keys):    
         raise ValueError(f'Expected {len(keys)} hyperparameters, got {len(params)}')
     return {k: params[k] for k in keys}
+
+def parse_lr_params(params):
+    return {'C': float(params)}
 
 def parse_lgb_params(params):
     keys = ['n_estimators', 'learning_rate', 'max_depth', 'subsample', 'colsample_bytree', 'reg_alpha', 'reg_lambda']
@@ -20,7 +23,7 @@ def parse_cb_params(params):
     return {k: params[k] for k in keys}
 
 def parse_tree_params(params):
-    keys = ['criterion', 'max_depth', 'min_samples_split', 'class_weight']
+    keys = ['criterion', 'max_depth', 'min_samples_split', 'class_weight', 'max_features']
     if len(params) != len(keys):    
         raise ValueError(f'Expected {len(keys)} hyperparameters, got {len(params)}')
     return {k: params[k] for k in keys}
@@ -79,7 +82,11 @@ def get_train_args():
                         'min_samples_split - minimum number of samples required to split an internal node\n'
                         'class_weight - True/False whether to rebalance classes\n'
                         )
-
+    parser.add_argument('--lr-params', type=parse_lr_params, default=None,
+                        help='LogisticRegression hyperparameters, required if model-type is LogisticRegression\n'
+                        'Expected keys:\n'
+                        'C - inverse of regularization strength\n'
+                        )
 
     return parser.parse_args()
 
@@ -102,9 +109,9 @@ def get_predict_args():
 
 def get_result_args():
     parser = argparse.ArgumentParser(description='Analyze results')
-    parser.add_argument('--predioctions-path', type=str, required=True, help="Path to predictions file")
+    parser.add_argument('--predictions-path', type=str, required=True, help="Path to predictions file")
     parser.add_argument('--labels-path', type=str, required=True, help="Path to labels file")
-    parser.add_argument('--features-path', type=str, required=True, help='Path to predictions file')
+    parser.add_argument('--features-path', type=str, required=True, help='Path to features file')
     parser.add_argument('--output-path', type=str, required=True, help='Path to results file')
     parser.add_argument('--verbose', action='store_true', help='Print additional information')
     return parser.parse_args()
