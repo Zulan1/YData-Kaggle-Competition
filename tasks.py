@@ -52,7 +52,7 @@ def echo(c, name):
 
 
 @task
-def pipeline(c, gpu=False):
+def pipeline(c, n_trials=100, gpu=False):
     """Run full training pipeline:
     1. Preprocess training data
     2. Train model with RandomForest defaults
@@ -66,7 +66,8 @@ def pipeline(c, gpu=False):
         f"python train.py --optuna-search " \
         f"--input-path=./data/ " \
         f"--run-id={run_id} " \
-        f"--output-path=./models/ " \
+        f"--n-trials={n_trials} " \
+        f"--output-path=./data/ " \
     
     if gpu:
         train_cmd += "--gpu"

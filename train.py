@@ -133,7 +133,7 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
                     'reg_alpha': trial.suggest_float('reg_alpha', 0, 1.0),
                     'reg_lambda': trial.suggest_float('reg_lambda', 0, 10.0),
                     'min_child_samples': trial.suggest_int('min_child_samples', 5, 100),
-                    'is_balanced': trial.suggest_categorical('is_balanced', [True, False]),
+                    'is_unbalanced': trial.suggest_categorical('is_unbalanced', [True, False]),
                     'device': 'gpu' if args.gpu else 'cpu',
                     'valid_sets': [(X_val, y_val)],
                     'verbose': -1,
@@ -169,17 +169,19 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
 
     study = optuna.create_study(directions=['maximize', 'maximize', 'maximize', 'maximize'])
     study.optimize(objective, n_trials=args.n_trials, callbacks=[log_score])
-    print(f"Finished {args.n_trials} found best params: {study.best_params}, with score: {study.best_value}.")
-    return study.best_trials[0].params
+    best_trial = study.best_trials[0]
+    print(f"Finished {args.n_trials} found best params: {best_trial.params}, with score: {best_trial.values[0]}.")
+    return best_trial.params
 
 
 def main():
     args = get_train_args()
+    run_id = args.run_id
 
-    input_path = args.input_path
-    
+    input_path = os.path.join(args.input_path, f"preprocess_{run_id}")
     train_path = os.path.join(input_path, cons.DEFAULT_TRAIN_SET_FILE)
     val_path = os.path.join(input_path, cons.DEFAULT_VAL_SET_FILE)
+
     df_train = pd.read_csv(train_path)
     df_val = pd.read_csv(val_path)
 
