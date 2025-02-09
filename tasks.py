@@ -52,7 +52,7 @@ def echo(c, name):
 
 
 @task
-def pipeline(c):
+def pipeline(c, n_trials=100, gpu=False):
     """Run full training pipeline:
     1. Preprocess training data
     2. Train model with RandomForest defaults
@@ -62,25 +62,23 @@ def pipeline(c):
     """
     run_id = get_timestamp_str()
     c.run(f"python preprocess.py --mode=train --run-id={run_id} --output-path=./data/ --input-path=./data/ --verbose")
-    c.run(
-        f"python train.py --model-type=RandomForest "
-        f"--n-estimators=500 "
-        f"--criterion=gini "
-        f"--max-depth=10 "
-        f"--min-samples-split=5 "
-        f"--min-samples-leaf=2 "
-        f"--class-weight=balanced_subsample "
-        f"--run-id={run_id} "
-        f"--output-path=./data/ "
-        f"--input-path=./data/preprocess_{run_id}"
-    )
+    train_cmd = \
+        f"python train.py --optuna-search " \
+        f"--input-path=./data/ " \
+        f"--run-id={run_id} " \
+        f"--n-trials={n_trials} " \
+        f"--output-path=./data/ " \
+    
+    if gpu:
+        train_cmd += "--gpu"
+    c.run(train_cmd)
     c.run(f"python preprocess.py --mode=test --run-id={run_id} --input-path=./data/preprocess_{run_id}/ --output-path=./data/ --verbose")
     c.run(f"python predict.py --run-id={run_id} --output-path=./data/ --input-path=./data/ --verbose")
     c.run(f"python result.py --run-id={run_id} --output-path=./data/ --input-path=./data/ --error-analysis")
 
 
 @task
-def external_pipeline(c):
+def debug_pipeline(c):
     """Run pipeline on external test data:
     1. Preprocess test data
     2. Generate predictions
@@ -90,11 +88,20 @@ def external_pipeline(c):
     run_id = get_timestamp_str()
     c.run(f"python preprocess.py --mode=train --run-id={run_id} --input-path=./data/train_dataset_full.csv --output-path=./data/ --verbose")
     c.run(
-        f"python train.py --model-type=LogisticRegression "
-        f"--C=0.001 "
-        f"--run-id={run_id} "
-        f"--output-path=./data/ "
-        f"--input-path=./data/preprocess_{run_id}"
+        "python train.py "
+        "model-type=XGBoost "
+        "--xgb-params='["
+            "100," # n_estimators
+            "0.1," # learning_rate
+            "6," # max_depth
+            "0.6," # subsample
+            "0.6," # gamma
+            "1," # reg_lambda
+            "scale_pos_weight=True" # is_balanced
+        "]'"
+        "--input-path ./data/"
+        f"--run-id {run_id} "
+        "--output-path ./models/ "
     )
     c.run(f"python preprocess.py --mode=test --run-id={run_id} --input-path=./data/--output-path=./data/ --verbose")
     c.run(f"python predict.py --run-id={run_id} --output-path=./data/ --input-path=./data/ --verbose")
