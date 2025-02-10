@@ -11,18 +11,60 @@ def save_data_for_test(df: pd.DataFrame, output_path: str) -> None:
     features = df.drop(columns=cons.TARGET_COLUMN)
     labels = df[cons.TARGET_COLUMN]
     features.to_csv(os.path.join(output_path, cons.DEFAULT_TEST_FEATURES_FILE), index=False)
+    dtypes_dict = features.dtypes.astype(str).to_dict()
+    with open(os.path.join(output_path, cons.DEFAULT_TEST_DTYPES_FILE), 'wb') as f:
+        pickle.dump(dtypes_dict, f)
     labels.to_csv(os.path.join(output_path, cons.DEFAULT_TEST_LABELS_FILE), index=False)
+    print("dtypes_dict for save", dtypes_dict)
     return
 
 def save_data_for_validation(df: pd.DataFrame, output_path: str) -> None:
     """Save validation features and labels to separate CSV files."""
     df.to_csv(os.path.join(output_path, cons.DEFAULT_VAL_SET_FILE), index=False)
+    dtypes_dict = df.dtypes.astype(str).to_dict()
+    with open(os.path.join(output_path, cons.DEFAULT_VAL_DTYPES_FILE), 'wb') as f:
+        pickle.dump(dtypes_dict, f)
     return
 
 def save_data_for_training(df: pd.DataFrame, output_path: str) -> None:
     """Save training features and labels to separate CSV files."""
     df.to_csv(os.path.join(output_path, cons.DEFAULT_TRAIN_SET_FILE), index=False)
+    dtypes_dict = df.dtypes.astype(str).to_dict()
+    print("dtypes_dict for save", dtypes_dict)
+    with open(os.path.join(output_path, cons.DEFAULT_TRAIN_DTYPES_FILE), 'wb') as f:
+        pickle.dump(dtypes_dict, f)
     return
+
+def get_val_set(input_path: str) -> pd.DataFrame:
+    """Get validation set from a CSV file."""
+    df_val = pd.read_csv(os.path.join(input_path, cons.DEFAULT_VAL_SET_FILE))
+    df_val = df_val.copy()
+    with open(os.path.join(input_path, cons.DEFAULT_VAL_DTYPES_FILE), 'rb') as f:
+        dtypes_dict = pickle.load(f)
+    for col, dtype in dtypes_dict.items():
+        df_val[col] = df_val[col].astype(dtype)
+    return df_val
+
+def get_train_set(input_path: str) -> pd.DataFrame:
+    """Get training set from a CSV file."""
+    df_train = pd.read_csv(os.path.join(input_path, cons.DEFAULT_TRAIN_SET_FILE))
+    df_train = df_train.copy()
+    with open(os.path.join(input_path, cons.DEFAULT_TRAIN_DTYPES_FILE), 'rb') as f:
+        dtypes_dict = pickle.load(f)
+    for col, dtype in dtypes_dict.items():
+        df_train[col] = df_train[col].astype(dtype)
+    return df_train
+
+def get_test_features(input_path: str) -> pd.DataFrame:
+    """Get test features from a CSV file."""
+    df_test = pd.read_csv(os.path.join(input_path, cons.DEFAULT_TEST_FEATURES_FILE))
+    df_test = df_test.copy()
+    with open(os.path.join(input_path, cons.DEFAULT_TEST_DTYPES_FILE), 'rb') as f:
+        dtypes_dict = pickle.load(f)
+    for col, dtype in dtypes_dict.items():
+        df_test[col] = df_test[col].astype(dtype)
+    print("df_test dtypes loaded", df_test.dtypes)
+    return df_test
 
 def save_predictions(df, output_path, verbose):
     predictions_path = os.path.join(output_path, cons.DEFAULT_PREDICTIONS_FILE)

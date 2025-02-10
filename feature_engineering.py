@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import config as conf
 def extract_time_features(df: pd.DataFrame) -> pd.DataFrame:
     """Extract time features from the DateTime column.
     
@@ -13,17 +14,20 @@ def extract_time_features(df: pd.DataFrame) -> pd.DataFrame:
     """
     # One-hot encode day of week (0-6)
     df = df.copy()
- #   days = df['DateTime'].dt.dayofweek
- #   for day in range(7):
- #       day_col = (days == day).astype(int)
- #       df.loc[:, f'day_{day}'] = day_col
+    days = df['DateTime'].dt.dayofweek
+    for day in range(7):
+        day_col = (days == day).astype(int)
+        df.loc[:, f'day_{day}'] = day_col
     
     # Cyclical encoding for hour of day
     hours = df['DateTime'].dt.hour
-    hours_sin = np.sin(hours * (2 * np.pi / 24))
-    hours_cos = np.cos(hours * (2 * np.pi / 24))
-    df.loc[:, 'hour_sin'] = hours_sin
-    df.loc[:, 'hour_cos'] = hours_cos
+
+    # Add binary columns for specific time ranges
+    df.loc[:, '18_21'] = ((hours >= 18) & (hours < 21)).astype(int)
+    df.loc[:, '21_00'] = ((hours >= 21) | (hours < 0)).astype(int)
+    df.loc[:, '00_08'] = ((hours >= 0) & (hours < 8)).astype(int)
+    df.loc[:, '08_13'] = ((hours >= 8) & (hours < 13)).astype(int)
+    df.loc[:, '13_18'] = ((hours >= 13) & (hours < 18)).astype(int)
     
     return df
 def add_first_session_feature(df: pd.DataFrame) -> pd.DataFrame:
@@ -119,7 +123,7 @@ def add_time_since_last_session(df: pd.DataFrame) -> pd.DataFrame:
     time_diff = sorted_df.groupby('user_id')['DateTime'].diff()
     
     # Convert timedelta to minutes, replace NaN (first sessions) with -1
-    minutes_since_last = time_diff.dt.total_seconds() / 60
+    minutes_since_last = (time_diff.dt.total_seconds() / 60)
     minutes_since_last = minutes_since_last.fillna(-1)
     
     # Create mapping DataFrame to restore original order
@@ -133,6 +137,7 @@ def add_time_since_last_session(df: pd.DataFrame) -> pd.DataFrame:
     
     # Assign to original DataFrame and clean up
     df['time_since_last_session'] = result_df['time_since_last_session']
+    df['time_since_last_session'] = df['time_since_last_session'].astype(int)
     df.drop('_temp_idx', axis=1, inplace=True)
     return df
 
@@ -166,7 +171,7 @@ def add_num_sessions_today(df: pd.DataFrame) -> pd.DataFrame:
     df['num_sessions_today'] = df.groupby(['user_id', 'date'])['date'].transform('count')
     df.drop('date', axis=1, inplace=True)
     return df
-def add_high_volume_user(df: pd.DataFrame, quantile: float = 0.9) -> pd.DataFrame:
+def add_high_volume_user(df: pd.DataFrame, quantile: float = 0.95) -> pd.DataFrame:
     """
     Add binary feature indicating if user is in the top quantile of users by number of sessions.
     
@@ -177,8 +182,10 @@ def add_high_volume_user(df: pd.DataFrame, quantile: float = 0.9) -> pd.DataFram
     Returns:
         DataFrame with new high_volume_user column
     """
-    df = df.copy()
-    df['high_volume_user'] = (df.groupby('user_id').size().rank(pct=True) > quantile).astype(int)
+    user_session_counts = df.groupby('user_id').size()
+    high_volume_threshold = user_session_counts.quantile(quantile)
+    high_volume_users = user_session_counts[user_session_counts >= high_volume_threshold].index
+    df['high_volume_user'] = df['user_id'].isin(high_volume_users).astype(int)
     return df
 def add_product_viewed_before(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -349,19 +356,78 @@ def add_number_of_products_viewed_today(df: pd.DataFrame) -> pd.DataFrame:
     df['number_of_products_viewed_today'] = result_df['number_of_products_viewed_today']
     df.drop(['_temp_idx', 'date'], axis=1, inplace=True)
     return df
-def add_product_variety_for_user(df: pd.DataFrame) -> pd.DataFrame:
+def add_variety_for_user(df: pd.DataFrame, column: str) -> pd.DataFrame:
     df = df.copy()
-    df['product_variety'] = df.groupby('user_id')['product'].nunique()
+    df[column] = df[column].astype(str)
+    df[f'{column}_variety'] = df.groupby('user_id')[column].transform('nunique')
     return df
-def add_category_variety_for_user(df: pd.DataFrame) -> pd.DataFrame:
+def add_same_product_as_previous_session(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Add binary feature indicating if user viewed the same product in their previous session.
+    
+    Args:
+        df: DataFrame containing user_id, DateTime, and product columns
+        
+    Returns:
+        DataFrame with new same_product_as_previous_session column
+    """
+    # Create a temporary index to ensure correct mapping
     df = df.copy()
-    df['category_variety'] = df.groupby('user_id')['product_category_1'].nunique()
+    df['_temp_idx'] = range(len(df))
+    
+    # Sort by user and datetime
+    sorted_df = df.sort_values(['user_id', 'DateTime'])
+    
+    # Compare product with previous session's product
+    same_product = sorted_df.groupby('user_id')['product'].shift() == sorted_df['product']
+    
+    # Create mapping DataFrame to restore original order
+    result_df = pd.DataFrame({
+        '_temp_idx': sorted_df['_temp_idx'],
+        'same_product_as_previous_session': same_product
+    })
+    
+    # Map back to original order
+    result_df = result_df.sort_values('_temp_idx')
+    
+    # Assign to original DataFrame and clean up
+    df['same_product_as_previous_session'] = result_df['same_product_as_previous_session'].fillna(False).astype(int)
+    df.drop('_temp_idx', axis=1, inplace=True)
+    
     return df
-def add_campaign_variety_for_user(df: pd.DataFrame) -> pd.DataFrame:
+def add_most_common_category_for_user(df: pd.DataFrame, column: str) -> pd.DataFrame:
+    """
+    Add the most common product for each user. If there are ties, use the most recent one.
+    
+    Args:
+        df: DataFrame containing user_id, DateTime, and product columns
+        
+    Returns:
+        DataFrame with new most_common_product column
+    """
     df = df.copy()
-    df['campaign_variety'] = df.groupby('user_id')['campaign_id'].nunique()
+    
+    # Create a temporary DataFrame with product counts and most recent DateTime
+    product_stats = (df.groupby(['user_id', column])
+                      .agg({'DateTime': 'max', column: 'size'})
+                      .rename(columns={column: 'count'}))
+    
+    # For each user, get the product with highest count, breaking ties with most recent DateTime
+    most_common = (product_stats.reset_index()
+                               .sort_values(['user_id', 'count', 'DateTime'], 
+                                          ascending=[True, False, False])
+                               .groupby('user_id')
+                               .first()
+                               .reset_index()[['user_id', column]])
+    
+    # Map back to original DataFrame
+    df[f'most_common_{column}'] = df['user_id'].map(most_common.set_index('user_id')[column])
+    
     return df
-def add_features(df: pd.DataFrame) -> pd.DataFrame:
+
+
+
+def add_features(df: pd.DataFrame, add_catboost_features: bool = conf.USE_CATBOOST) -> pd.DataFrame:
     """Add all engineered features and verify no NaN values are introduced."""
     df['DateTime'] = pd.to_datetime(df['DateTime'], errors='coerce')
     df = extract_time_features(df)
@@ -377,7 +443,12 @@ def add_features(df: pd.DataFrame) -> pd.DataFrame:
     df = add_number_of_websites_viewed_today(df)
     df = add_num_sessions_today(df)
     df = add_category_viewed_before(df)
-    df = add_product_variety_for_user(df)
-    df = add_category_variety_for_user(df)
-    df = add_campaign_variety_for_user(df)
+    df = add_variety_for_user(df, 'product')
+    df = add_variety_for_user(df, 'product_category_1')
+    df = add_variety_for_user(df, 'campaign_id')
+    df = add_variety_for_user(df, 'webpage_id')
+    df = add_same_product_as_previous_session(df)
+    if add_catboost_features:
+        for col in ['product', 'product_category_1', 'campaign_id', 'webpage_id']:
+            df = add_most_common_category_for_user(df, col)
     return df

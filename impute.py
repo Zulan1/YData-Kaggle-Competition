@@ -1,5 +1,6 @@
-from sklearn.impute import SimpleImputer
+from sklearn.impute import KNNImputer, SimpleImputer
 import constants as cons
+import config as conf
 import pandas as pd
 import numpy as np
 
@@ -27,14 +28,15 @@ class ClickImputer:
     
     def fit(self, df: pd.DataFrame):
         """Fit the imputer on training data."""
-        self.imputer.fit(df[cons.COLUMNS_TO_IMPUTE])
+        self.columns_to_impute = list(set(df.columns) - set(cons.INDEX_COLUMNS + [cons.TARGET_COLUMN]))
+        self.imputer.fit(df[self.columns_to_impute])
     
     def transform(self, df: pd.DataFrame) -> pd.DataFrame:
         """Transform data by imputing missing values."""
         df = df.copy()
         df = self._impute_user_id(df)
         df = self._impute_session_id(df)
-        df[cons.COLUMNS_TO_IMPUTE] = self.imputer.transform(df[cons.COLUMNS_TO_IMPUTE])
+        df[self.columns_to_impute] = self.imputer.transform(df[self.columns_to_impute])
         return df
     
     @staticmethod

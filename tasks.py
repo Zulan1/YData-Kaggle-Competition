@@ -64,16 +64,16 @@ def debug_pipeline(c):
 
     c.run(
         "python train.py "
-        "--model-type=LogisticRegression "
-        "--lr-params=0.01 "
-        f"--input-path ./data/preprocess_{run_id}/ "
-        f"--output-path ./data/train_{run_id}/ "
+        "--use-default-model "
+        f"--input-path=./data/preprocess_{run_id}/ "
+        f"--output-path=./data/train_{run_id}/ "
     )
 
     c.run(
         f"python predict.py "
         f"--model-path=./data/train_{run_id}/{cons.DEFAULT_MODEL_FILE} "
-        f"--input-path=./data/preprocess_{run_id}/{cons.DEFAULT_TEST_FEATURES_FILE} "
+        f"--transformer-path=./data/preprocess_{run_id}/{cons.DEFAULT_TRANSFORMER_FILE} "
+        f"--input-path=./data/preprocess_{run_id}/ "
         f"--output-path=./data/predictions_{run_id}/ "
         "--verbose"
         )
@@ -90,7 +90,7 @@ def inference_pipeline(c, transformer_path, model_path):
     run_id = get_timestamp_str()
     c.run(
             "python preprocess.py "
-            "--mode=test "
+            "--mode=inference "
             f"--run-id={run_id} "
             "--input-path=./data/ "
             "--output-path=./data/ "

@@ -20,13 +20,11 @@ def preprocess_towards_training(df):
     transformer = DataTransformer()
     transformer.fit(df)
     df = transformer.transform(df)
-    df = df.drop(columns=cons.INDEX_COLUMNS + [cons.DATETIME_COLUMN])
     return df, transformer
 
 def preprocess_towards_evaluation(df, transformer):
     """Preprocess validation/test data using fitted transformers."""
     df = transformer.transform(df)
-    df = df.drop(columns=cons.INDEX_COLUMNS + [cons.DATETIME_COLUMN])
     return df
 
 def clean_data(df):
@@ -45,11 +43,9 @@ def main():
         df = df.drop(columns=cons.COLUMNS_TO_DROP)
         df = clean_data(df)
         df_train, df_val, df_test = split_by_user(df)
-
         df_train, transformer = preprocess_towards_training(df_train)
         df_val = preprocess_towards_evaluation(df_val, transformer)
         df_test = preprocess_towards_evaluation(df_test, transformer)
-
         save_transformer(transformer, output_path, args.verbose)
         save_data_for_training(df_train, output_path)
         save_data_for_validation(df_val, output_path)
@@ -58,7 +54,7 @@ def main():
         if args.verbose:
             print(f"Saved preprocessed data to {output_path}")
     
-    elif args.mode == 'test':
+    elif args.mode == 'inference':
         transformer = get_transformer(args.transformer_path)
         df = preprocess_towards_evaluation(df, transformer)
         save_data_for_test(df, output_path)

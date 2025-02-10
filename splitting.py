@@ -1,14 +1,10 @@
-import constants as cons
+import config as conf
 import numpy as np
 
-def split_by_user(df, split_ratios=cons.TRAIN_TEST_VAL_SPLIT):
+def split_by_user(df, split_ratios=conf.TRAIN_TEST_VAL_SPLIT):
     """Split DataFrame into train/val/test while keeping user behavior balanced."""
     if not np.isclose(sum(split_ratios), 1.0):
         raise ValueError("Split ratios must sum to 1")
-    
-    # Verify no NaN values in key columns before splitting
-    if df['user_id'].isna().any() or df['session_id'].isna().any() or df['is_click'].isna().any():
-        raise ValueError("NaN values found in user_id, session_id or is_click columns")
     
     # Get user stats and behavior categories
     user_stats = df.groupby('user_id').agg({
@@ -28,7 +24,7 @@ def split_by_user(df, split_ratios=cons.TRAIN_TEST_VAL_SPLIT):
     # Split users within each behavior group
     for users in behavior_groups.values():
         users = np.array(users)
-        np.random.seed(cons.RANDOM_STATE)
+        np.random.seed(conf.RANDOM_STATE)
         np.random.shuffle(users)
         
         n_users = len(users)
@@ -46,12 +42,5 @@ def split_by_user(df, split_ratios=cons.TRAIN_TEST_VAL_SPLIT):
     first_split = df[df['user_id'].isin(first_users)]
     second_split = df[df['user_id'].isin(second_users)]
     third_split = df[df['user_id'].isin(third_users)]
-    
-    # Verify no NaN values were introduced during splitting
-    for split in [first_split, second_split, third_split]:
-        if split.isna().any().any():
-            raise ValueError("NaN values introduced during splitting")
-    
-    
     
     return first_split, second_split, third_split

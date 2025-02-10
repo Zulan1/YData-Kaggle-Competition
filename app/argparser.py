@@ -87,6 +87,7 @@ def get_train_args():
                         'Expected keys:\n'
                         'C - inverse of regularization strength\n'
                         )
+    parser.add_argument('--use-default-model', action='store_true', help='Use default model parameters')
 
     return parser.parse_args()
 
@@ -105,6 +106,7 @@ def get_predict_args():
     parser.add_argument('--output-path', type=str, help='Path to output data for prediction')
     parser.add_argument('--verbose', action='store_true', help='Print additional information')
     parser.add_argument('--model-path', type=str, help='path of the model to use for prediction')
+    parser.add_argument('--transformer-path', type=str, default=None,help='Path to transformer file')
     return parser.parse_args()
 
 def get_result_args():

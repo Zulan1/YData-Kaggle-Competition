@@ -9,7 +9,7 @@ import pandas as pd
 import constants as cons
 
 import pandas as pd
-
+import config as conf
 
 from sklearn.dummy import DummyClassifier
 from sklearn.metrics import confusion_matrix
@@ -17,8 +17,12 @@ from sklearn.tree import DecisionTreeClassifier
 
 
 from app.metrics import compute_score
+from app.file_manager import get_val_set, get_train_set, get_transformer
+from app.file_manager import save_model
 from app.argparser import get_train_args
 from app.helper_functions import split_dataset_Xy
+
+from catboost_transform import catboost_transform
 
 models = {
     'XGBoost': xgb.XGBClassifier(),
@@ -27,6 +31,11 @@ models = {
 }
 
 def get_model(args, X_train, y_train, X_val, y_val):
+    if args.use_default_model:
+        model = models[conf.DEFAULT_MODEL]
+        model.set_params(**conf.DEFAULT_MODEL_PARAMS)
+        return model
+
     if args.optuna_search:
         best_params = hyperparameter_search(X_train, y_train, X_val, y_val, args)
         model_type = best_params['model_type']
@@ -175,20 +184,16 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
     print(f"Finished {args.n_trials} found best params: {best_trial.params}, with score: {best_trial.values[0]}.")
     return best_trial.params
 
-
 def main():
     args = get_train_args()
-    run_id = args.run_id
+    
+    input_path = args.input_path
 
-    input_path = os.path.join(args.input_path, f"preprocess_{run_id}")
-    train_path = os.path.join(input_path, cons.DEFAULT_TRAIN_SET_FILE)
-    val_path = os.path.join(input_path, cons.DEFAULT_VAL_SET_FILE)
-
-    df_train = pd.read_csv(train_path)
-    df_val = pd.read_csv(val_path)
-
+    df_train = get_train_set(input_path)
+    df_val = get_val_set(input_path)
     X_train, y_train = split_dataset_Xy(df_train)
     X_val, y_val = split_dataset_Xy(df_val)
+    print("X_train dtypes", X_train.dtypes)
 
 
     strategies = ('most_frequent', 'stratified', 'uniform')
@@ -211,6 +216,7 @@ def main():
     
 
     model = get_model(args, X_train, y_train, X_val, y_val)
+    print("X_train dtypes", X_train.dtypes)
     model.fit(X_train, y_train)
     predictions = model.predict(X_val)
     y_proba = model.predict_proba(X_val)[:, 1]
@@ -219,13 +225,10 @@ def main():
     print(confusion_matrix(y_val, predictions))
     wandb.log({args.scoring_method: score})
     print(f"Final score: {score}")
+    os.makedirs(args.output_path, exist_ok=True)
+    save_model(model, args.output_path)
 
-    
-    output_path = f'{args.output_path}/train_{args.run_id}'
-    os.makedirs(output_path, exist_ok=True)
-    with open(f'{output_path}/model.pkl', 'wb') as p:
-        pickle.dump(model, p)
-    
+
 
 if __name__ == '__main__':
     main()
