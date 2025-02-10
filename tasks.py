@@ -3,7 +3,7 @@ from invoke import task
 from app.time_utils import get_timestamp_str
 
 @task
-def pipeline(c, n_trials=3, gpu=False, run_id=None):
+def pipeline(c, n_trials=50, gpu=False, run_id=None):
     """Run full training pipeline:
     1. Preprocess training data
     2. Train model with RandomForest defaults

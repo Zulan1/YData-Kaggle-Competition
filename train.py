@@ -6,8 +6,6 @@ import wandb
 import xgboost as xgb
 import lightgbm as lgb
 import constants as cons
-from app.helper_functions import get_transformer
-from app.file_manager import save_model
 
 import pandas as pd
 
@@ -45,7 +43,7 @@ def get_model(args, X_train, y_train, X_val, y_val):
     model_type = args.model_type
     match model_type:
         case 'LogisticRegression':
-            model = LogisticRegression(C=args.lr_params['C'])
+            model = LogisticRegression(C=args.C)
         case 'RandomForest':
             model = RandomForestClassifier(
                 n_estimators=args.n_estimators,
@@ -53,7 +51,6 @@ def get_model(args, X_train, y_train, X_val, y_val):
                 max_depth=args.max_depth,
                 min_samples_split=args.min_samples_split,
                 class_weight=args.class_weight,
-                max_features=args.max_features,
                 )
         case 'SVM':
             model = SVC(
@@ -68,7 +65,6 @@ def get_model(args, X_train, y_train, X_val, y_val):
                 subsample=args.subsample,
                 gamma=args.gamma,
                 reg_lambda=args.reg_lambda,
-                scale_pos_weight=args.scale_pos_weight,
             )
         case 'LightGBM':
             model = lgb.LGBMClassifier(
@@ -161,17 +157,14 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
     # optuna.visualization.plot_param_importances(study).write_image('plots/optuna_importances.png')
     return study.best_params
 
-
 def main():
     args = get_train_args()
+
     input_path = args.input_path
-
-
-
-
+    run_id = args.run_id
     
-    train_path = os.path.join(input_path, cons.DEFAULT_TRAIN_SET_FILE)
-    val_path = os.path.join(input_path, cons.DEFAULT_VAL_SET_FILE)
+    train_path = os.path.join(input_path, f'preprocess_{run_id}', cons.DEFAULT_TRAIN_SET_FILE)
+    val_path = os.path.join(input_path, f'preprocess_{run_id}', cons.DEFAULT_VAL_SET_FILE)
     df_train = pd.read_csv(train_path)
     df_val = pd.read_csv(val_path)
 
@@ -185,10 +178,9 @@ def main():
     # X_train = X_train[selected_columns]
     # X_val = X_val[selected_columns]
     X_train, y_train = SMOTE().fit_resample(X_train, y_train)
-   # X_train = enforce_smote(X_train, transformer)
-
 
     
+
     dmy_cls = DummyClassifier(strategy='most_frequent')
     dmy_cls.fit(X_train, y_train)
     baseline_score = compute_score(args.scoring_method, dmy_cls.predict(X_val), y_val)
@@ -210,10 +202,16 @@ def main():
     print(f"Final score: {score}")
 
     
-    output_path = args.output_path
+    output_path = f'{args.output_path}/train_{args.run_id}'
     os.makedirs(output_path, exist_ok=True)
-    save_model(model, output_path)
-
+    with open(f'{output_path}/model.pkl', 'wb') as p:
+        pickle.dump(model, p)
+    
+    # predictions = model.predict(X_test)
+    # score = compute_score(args.scoring_method, y_test, predictions)
+    # print(confusion_matrix(y_test, predictions))
+    # print(f"Final Test Model score {args.scoring_method}: {score}")
+    # wandb.log({f'test_{args.scoring_method}': score})
 
             
 if __name__ == '__main__':
