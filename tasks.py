@@ -81,7 +81,9 @@ def debug_pipeline(c):
           f"--predictions-path=./data/predictions_{run_id}/{cons.DEFAULT_PREDICTIONS_FILE} "
           f"--labels-path=./data/preprocess_{run_id}/{cons.DEFAULT_TEST_LABELS_FILE} "
           f"--features-path=./data/preprocess_{run_id}/{cons.DEFAULT_TEST_FEATURES_FILE} "
-          f"--output-path=./data/result_{run_id}/"
+          f"--predicted-probabilities-path=./data/predictions_{run_id}/{cons.DEFAULT_PREDICTED_PROBABILITIES_FILE} "
+          f"--output-path=./data/result_{run_id}/ "
+          f"--model-path=./data/train_{run_id}/{cons.DEFAULT_MODEL_FILE}"
           )
 
 

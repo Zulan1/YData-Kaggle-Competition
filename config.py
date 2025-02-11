@@ -1,15 +1,15 @@
-import constants as cons
-
 USE_CATBOOST = True
 TRAIN_TEST_VAL_SPLIT = (0.6, 0.2, 0.2)
 KNN_IMPUTATION_NNEIGHBORS = 5
 IMPUTATION_STATEGY = 'most_frequent'
-RANDOM_STATE = 42
+RANDOM_STATE = 50
+
 LEAVE_ONE_OUT = True
+PRODUCT_TO_LEAVE = 'A'
 
 DEFAULT_MODEL = 'CatBoost'
 CAT_FEATURES = ['product', 'campaign_id', 'webpage_id', 'product_category_1', 'user_group_id', 'gender', 'var_1', 'user_depth'] + \
-[f'most_common_{col}' for col in ['product', 'product_category_1', 'campaign_id', 'webpage_id']]
+[f'most_common_{col}' for col in ['product', 'campaign_id', 'webpage_id', 'product_category_1']]
 
 DEFAULT_MODEL_PARAMS = {
     "iterations": 1000,  # Number of boosting rounds
@@ -21,9 +21,9 @@ DEFAULT_MODEL_PARAMS = {
     "cat_features": CAT_FEATURES,  # 🚀 No encoding needed!
     "scale_pos_weight": 13,  # 7% CTR
     "bagging_temperature": 1,  # Adds randomness for generalization
-    "random_strength": 1,  # Adds noise to prevent overfitting
+    "random_strength": 2,  # Adds noise to prevent overfitting
     "boosting_type": "Ordered",  # "Plain" is faster, "Ordered" is better for small datasets
     "subsample": 0.8,  # Helps prevent overfitting (sample 80% of data per iteration)
     "task_type": "CPU",  # 🚀 Run on local machine (CPU)
-    "verbose": 100  # Print progress every 100 iterations
+    "verbose": 100
 }

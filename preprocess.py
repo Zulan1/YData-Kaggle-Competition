@@ -1,18 +1,18 @@
 import os
 from typing import Tuple
+import config as conf
 
 import numpy as np
 import pandas as pd
 import pickle
 from app.argparser import get_preprocessing_args
 from app.helper_functions import log
-
 from app.file_manager import (
     save_data_for_test,
     save_data_for_training, save_data_for_validation, get_data, save_transformer, get_transformer
 )
 import constants as cons
-from splitting import split_by_user
+from splitting import split_data
 from transformer import DataTransformer
 
 def preprocess_towards_training(df):
@@ -42,17 +42,14 @@ def main():
     if args.mode == 'train':
         df = df.drop(columns=cons.COLUMNS_TO_DROP)
         df = clean_data(df)
-        df_train, df_val, df_test = split_by_user(df)
+        df_train, df_val, df_test = split_data(df, verbose=args.verbose)
         df_train, transformer = preprocess_towards_training(df_train)
         df_val = preprocess_towards_evaluation(df_val, transformer)
         df_test = preprocess_towards_evaluation(df_test, transformer)
         save_transformer(transformer, output_path, args.verbose)
         save_data_for_training(df_train, output_path)
         save_data_for_validation(df_val, output_path)
-        save_data_for_test(df_test, output_path)
-
-        if args.verbose:
-            print(f"Saved preprocessed data to {output_path}")
+        save_data_for_test(df_test, output_path, args.verbose)
     
     elif args.mode == 'inference':
         transformer = get_transformer(args.transformer_path)

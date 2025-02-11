@@ -6,7 +6,7 @@ from transformer import DataTransformer
 from typing import Any
 from app.helper_functions import log
 
-def save_data_for_test(df: pd.DataFrame, output_path: str) -> None:
+def save_data_for_test(df: pd.DataFrame, output_path: str, verbose: bool) -> None:
     """Save holdout features and labels to separate CSV files."""
     features = df.drop(columns=cons.TARGET_COLUMN)
     labels = df[cons.TARGET_COLUMN]
@@ -15,7 +15,6 @@ def save_data_for_test(df: pd.DataFrame, output_path: str) -> None:
     with open(os.path.join(output_path, cons.DEFAULT_TEST_DTYPES_FILE), 'wb') as f:
         pickle.dump(dtypes_dict, f)
     labels.to_csv(os.path.join(output_path, cons.DEFAULT_TEST_LABELS_FILE), index=False)
-    print("dtypes_dict for save", dtypes_dict)
     return
 
 def save_data_for_validation(df: pd.DataFrame, output_path: str) -> None:
@@ -30,7 +29,6 @@ def save_data_for_training(df: pd.DataFrame, output_path: str) -> None:
     """Save training features and labels to separate CSV files."""
     df.to_csv(os.path.join(output_path, cons.DEFAULT_TRAIN_SET_FILE), index=False)
     dtypes_dict = df.dtypes.astype(str).to_dict()
-    print("dtypes_dict for save", dtypes_dict)
     with open(os.path.join(output_path, cons.DEFAULT_TRAIN_DTYPES_FILE), 'wb') as f:
         pickle.dump(dtypes_dict, f)
     return
@@ -70,6 +68,12 @@ def save_predictions(df, output_path, verbose):
     predictions_path = os.path.join(output_path, cons.DEFAULT_PREDICTIONS_FILE)
     """Save predictions to a CSV file."""
     df.to_csv(predictions_path, index=False)
+    return
+
+def save_predicted_probabilities(df, output_path, verbose):
+    probabilities_path = os.path.join(output_path, cons.DEFAULT_PREDICTED_PROBABILITIES_FILE)
+    """Save predicted probabilities to a CSV file."""
+    df.to_csv(probabilities_path, index=False)
     return
 
 def get_model(model_path: str, verbose: bool) -> Any:

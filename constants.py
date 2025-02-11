@@ -12,6 +12,7 @@ DEFAULT_TEST_DTYPES_FILE = 'test_dtypes.pkl'
 DEFAULT_TEST_LABELS_FILE = 'test_labels.csv'
 
 DEFAULT_PREDICTIONS_FILE = 'predictions.csv'
+DEFAULT_PREDICTED_PROBABILITIES_FILE = 'predicted_probabilities.csv'
 
 DEFAULT_RESULTS_FILE = 'results.csv'
 

@@ -193,7 +193,6 @@ def main():
     df_val = get_val_set(input_path)
     X_train, y_train = split_dataset_Xy(df_train)
     X_val, y_val = split_dataset_Xy(df_val)
-    print("X_train dtypes", X_train.dtypes)
 
 
     strategies = ('most_frequent', 'stratified', 'uniform')
@@ -216,18 +215,15 @@ def main():
     
 
     model = get_model(args, X_train, y_train, X_val, y_val)
-    print("X_train dtypes", X_train.dtypes)
     model.fit(X_train, y_train)
     predictions = model.predict(X_val)
     y_proba = model.predict_proba(X_val)[:, 1]
-    print(y_proba)
     score = compute_score(args.scoring_method, y_val, predictions, y_proba)
     print(confusion_matrix(y_val, predictions))
     wandb.log({args.scoring_method: score})
     print(f"Final score: {score}")
     os.makedirs(args.output_path, exist_ok=True)
     save_model(model, args.output_path)
-
 
 
 if __name__ == '__main__':
