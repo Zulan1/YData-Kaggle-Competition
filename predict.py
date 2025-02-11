@@ -11,7 +11,7 @@ def get_model(input_path: str, run_id: str):
     model_path = os.path.join(input_path, f"train_{run_id}/model.pkl")
     return pickle.load(open(model_path, 'rb'))
 
-def get_data(input_path: str, run_id: str) -> pd.DataFrame:
+def get_data(option, input_path: str, run_id: str) -> pd.DataFrame:
     data_path = os.path.join(input_path, f"preprocess_{run_id}/{cons.DEFAULT_PROCESSED_TEST_FILE}")
     return pd.read_csv(data_path)
 
