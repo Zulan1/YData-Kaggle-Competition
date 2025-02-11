@@ -4,7 +4,6 @@ models/
 data/
 results/
 .vscode/
-archived_experiments/
 catboost_info/
 
 # Virtual environments

@@ -7,5 +7,4 @@ def catboost_transform(df: pd.DataFrame):
     df[obj_cols] = df[obj_cols].astype("string[python]")
     float_cols = df.select_dtypes(include=['float']).columns
     df[float_cols] = df[float_cols].astype(int)
-    print("df types after cb transform", df.dtypes)
     return df

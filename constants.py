@@ -9,6 +9,8 @@ DEFAULT_TRAIN_DTYPES_FILE = 'train_dtypes.pkl'
 DEFAULT_VAL_DTYPES_FILE = 'val_dtypes.pkl'
 DEFAULT_TEST_FEATURES_FILE = 'test_features.csv'
 DEFAULT_TEST_DTYPES_FILE = 'test_dtypes.pkl'
+DEFAULT_EXTERNAL_TEST_FEATURES_FILE = 'external_test_features.csv'
+DEFAULT_EXTERNAL_TEST_DTYPES_FILE = 'external_test_dtypes.pkl'
 DEFAULT_TEST_LABELS_FILE = 'test_labels.csv'
 
 DEFAULT_PREDICTIONS_FILE = 'predictions.csv'

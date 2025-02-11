@@ -25,7 +25,7 @@ def main():
     args = get_predict_args()
     model = get_model(args.model_path, args.verbose)
     df = get_test_features(args.input_path)
-    os.makedirs(args.output_path, exist_ok=True)
+    
     log(f"Predicting {cons.TARGET_COLUMN}", args.verbose)
 
     predictions = get_predictions(model, df)

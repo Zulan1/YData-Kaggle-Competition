@@ -16,6 +16,7 @@ def main():
     predicted_probabilities = pd.read_csv(args.predicted_probabilities_path)
     f1_value = f1_score(labels, predictions)
     auc_value = roc_auc_score(labels, predicted_probabilities)
+    print(f"\nScores:")
     print(f"F1 Score: {f1_value:.4f}")
     print(f"AUC Score: {auc_value:.4f}")
     if hasattr(model, 'feature_importances_'):

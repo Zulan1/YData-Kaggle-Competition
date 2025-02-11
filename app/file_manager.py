@@ -17,6 +17,14 @@ def save_data_for_test(df: pd.DataFrame, output_path: str, verbose: bool) -> Non
     labels.to_csv(os.path.join(output_path, cons.DEFAULT_TEST_LABELS_FILE), index=False)
     return
 
+def save_data_for_external_test(df: pd.DataFrame, output_path: str, verbose: bool) -> None:
+    """Save holdout features and labels to separate CSV files."""
+    features = df
+    features.to_csv(os.path.join(output_path, cons.DEFAULT_EXTERNAL_TEST_FEATURES_FILE), index=False)
+    dtypes_dict = features.dtypes.astype(str).to_dict()
+    with open(os.path.join(output_path, cons.DEFAULT_TEST_DTYPES_FILE), 'wb') as f:
+        pickle.dump(dtypes_dict, f)
+
 def save_data_for_validation(df: pd.DataFrame, output_path: str) -> None:
     """Save validation features and labels to separate CSV files."""
     df.to_csv(os.path.join(output_path, cons.DEFAULT_VAL_SET_FILE), index=False)
@@ -61,7 +69,6 @@ def get_test_features(input_path: str) -> pd.DataFrame:
         dtypes_dict = pickle.load(f)
     for col, dtype in dtypes_dict.items():
         df_test[col] = df_test[col].astype(dtype)
-    print("df_test dtypes loaded", df_test.dtypes)
     return df_test
 
 def save_predictions(df, output_path, verbose):
