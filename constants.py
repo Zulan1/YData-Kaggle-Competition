@@ -5,12 +5,14 @@ DEFAULT_EXTERNAL_RAW_TEST_FILE = 'X_test_1st_raw.csv'
 
 DEFAULT_TRAIN_SET_FILE = 'train.csv'
 DEFAULT_VAL_SET_FILE = 'val.csv'
-DEFAULT_TEST_SET_FILE = 'test.csv'
-
-DEFAULT_HOLDOUT_FEATURES_FILE = 'holdout_features.csv'
-DEFAULT_HOLDOUT_LABELS_FILE = 'holdout_labels.csv'
+DEFAULT_TRAIN_DTYPES_FILE = 'train_dtypes.pkl'
+DEFAULT_VAL_DTYPES_FILE = 'val_dtypes.pkl'
+DEFAULT_TEST_FEATURES_FILE = 'test_features.csv'
+DEFAULT_TEST_DTYPES_FILE = 'test_dtypes.pkl'
+DEFAULT_TEST_LABELS_FILE = 'test_labels.csv'
 
 DEFAULT_PREDICTIONS_FILE = 'predictions.csv'
+DEFAULT_PREDICTED_PROBABILITIES_FILE = 'predicted_probabilities.csv'
 
 DEFAULT_RESULTS_FILE = 'results.csv'
 
@@ -29,7 +31,3 @@ COLUMNS_TO_IMPUTE = ['gender', 'age_level', 'user_group_id', 'product_category_1
 #Column names groups:
 DEMOGRAPHICS = ['gender', 'age_level', 'city_development_index', 'user_group_id']
 CATEGORICAL = ['product', 'campaign_id', 'webpage_id', 'product_category_1', 'user_group_id', 'gender', 'var_1', 'day_of_week']
-
-RANDOM_STATE = 42
-
-TRAIN_TEST_VAL_SPLIT = (0.6, 0.2, 0.2)

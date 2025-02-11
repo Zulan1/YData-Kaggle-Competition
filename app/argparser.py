@@ -2,10 +2,13 @@ import argparse
 import constants as cons
 
 def parse_xgb_params(params):
-    keys = ['n_estimators', 'eta', 'max_depth', 'subsample', 'gamma', 'reg_lambda']
+    keys = ['n_estimators', 'eta', 'max_depth', 'subsample', 'gamma', 'reg_lambda', 'scale_pos_weight']
     if len(params) != len(keys):    
         raise ValueError(f'Expected {len(keys)} hyperparameters, got {len(params)}')
     return {k: params[k] for k in keys}
+
+def parse_lr_params(params):
+    return {'C': float(params)}
 
 def parse_lgb_params(params):
     keys = ['n_estimators', 'learning_rate', 'max_depth', 'subsample', 'colsample_bytree', 'reg_alpha', 'reg_lambda']
@@ -20,7 +23,7 @@ def parse_cb_params(params):
     return {k: params[k] for k in keys}
 
 def parse_tree_params(params):
-    keys = ['criterion', 'max_depth', 'min_samples_split', 'class_weight']
+    keys = ['criterion', 'max_depth', 'min_samples_split', 'class_weight', 'max_features']
     if len(params) != len(keys):    
         raise ValueError(f'Expected {len(keys)} hyperparameters, got {len(params)}')
     return {k: params[k] for k in keys}
@@ -31,9 +34,8 @@ def get_train_args():
     parser.add_argument('--input-path', type=str, required=True, help='Path to input data for training')
     parser.add_argument('--optuna-search', action='store_true', help='Whether to perform hyperparameter search')
     parser.add_argument('--n-trials', type=int, default=100, help='number of trials for hyperparameter search')
-    parser.add_argument('--scoring-method', type=str, default='f1', help='The metric to use for evaluation')
+    parser.add_argument('--scoring-method', type=str, default='auc', help='The metric to use for evaluation')
     parser.add_argument('--model-type', type=str, default=None, help='The type of model to train, or to search on if optuna_search is enabled')
-    parser.add_argument('--run-id', type=str, help='Run ID')
     parser.add_argument('--output-path', type=str, default='models', help='Path to the trained model')
     parser.add_argument('--gpu', action='store_true', help='Use GPU for training')
 
@@ -80,34 +82,40 @@ def get_train_args():
                         'min_samples_split - minimum number of samples required to split an internal node\n'
                         'class_weight - True/False whether to rebalance classes\n'
                         )
-
+    parser.add_argument('--lr-params', type=parse_lr_params, default=None,
+                        help='LogisticRegression hyperparameters, required if model-type is LogisticRegression\n'
+                        'Expected keys:\n'
+                        'C - inverse of regularization strength\n'
+                        )
+    parser.add_argument('--use-default-model', action='store_true', help='Use default model parameters')
 
     return parser.parse_args()
 
 def get_preprocessing_args():
     parser = argparse.ArgumentParser(description='Data Processing Pipeline')
-    parser.add_argument('--input-path', type=str, help='Folder with input data')
+    parser.add_argument('--input-path', type=str, help='Input data path')
     parser.add_argument('--output-path', type=str, help='Output directory of all proccessed csv files: train, val, test')
     parser.add_argument('--verbose', action='store_true', help='Print additional information')
     parser.add_argument('--mode', type=str, default='train', help='Mode: train, test')
-    parser.add_argument('--run-id', type=str, help='Run ID')
-
+    parser.add_argument('--transformer-path', type=str, default=None,help='Path to transformer file')
     return parser.parse_args()
-
 
 def get_predict_args():
     parser = argparse.ArgumentParser(description='Predict on new data')
-    parser.add_argument('--input-path', type=str, required=True, help='Path to input data for prediction')
+    parser.add_argument('--input-path', type=str, required=True, help='Path to input data for prediction (no labels)')
     parser.add_argument('--output-path', type=str, help='Path to output data for prediction')
     parser.add_argument('--verbose', action='store_true', help='Print additional information')
-    parser.add_argument('--run-id', type=str, help='Run ID')
+    parser.add_argument('--model-path', type=str, help='path of the model to use for prediction')
+    parser.add_argument('--transformer-path', type=str, default=None,help='Path to transformer file')
     return parser.parse_args()
 
 def get_result_args():
     parser = argparse.ArgumentParser(description='Analyze results')
-    parser.add_argument('--input-path', type=str, required=True, help='Path to predictions file')
+    parser.add_argument('--predictions-path', type=str, required=True, help="Path to predictions file")
+    parser.add_argument('--predicted-probabilities-path', type=str, required=True, help="Path to predicted probabilities file")
+    parser.add_argument('--labels-path', type=str, required=True, help="Path to labels file")
+    parser.add_argument('--features-path', type=str, required=True, help='Path to features file')
     parser.add_argument('--output-path', type=str, required=True, help='Path to results file')
     parser.add_argument('--verbose', action='store_true', help='Print additional information')
-    parser.add_argument('--run-id', type=str, help='Run ID')
-    parser.add_argument('--error-analysis', action='store_true', help='Analyze test set')
+    parser.add_argument('--model-path', type=str, required=True, help='Path to model file')
     return parser.parse_args()

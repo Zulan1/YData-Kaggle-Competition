@@ -1,16 +1,18 @@
 import os
 from typing import Tuple
+import config as conf
 
 import numpy as np
 import pandas as pd
 import pickle
 from app.argparser import get_preprocessing_args
-from app.helper_functions import (
-    log, save_data_for_test, save_data_for_holdout,
-    save_data_for_training, save_data_for_validation
+from app.helper_functions import log
+from app.file_manager import (
+    save_data_for_test,
+    save_data_for_training, save_data_for_validation, get_data, save_transformer, get_transformer
 )
 import constants as cons
-from splitting import split_by_user
+from splitting import split_data
 from transformer import DataTransformer
 
 def preprocess_towards_training(df):
@@ -18,13 +20,11 @@ def preprocess_towards_training(df):
     transformer = DataTransformer()
     transformer.fit(df)
     df = transformer.transform(df)
-    df = df.drop(columns=cons.INDEX_COLUMNS + [cons.DATETIME_COLUMN])
     return df, transformer
 
 def preprocess_towards_evaluation(df, transformer):
     """Preprocess validation/test data using fitted transformers."""
     df = transformer.transform(df)
-    df = df.drop(columns=cons.INDEX_COLUMNS + [cons.DATETIME_COLUMN])
     return df
 
 def clean_data(df):
@@ -33,54 +33,32 @@ def clean_data(df):
     df = df.dropna()
     return df
 
-def save_transformer_to_file(transformer, file_path, verbose):
-    """Save the transformer to a pickle file."""
-    with open(file_path, 'wb') as f:
-        pickle.dump(transformer, f)
-    if verbose:
-        print(f"Transformer saved to {file_path}")
-
-def get_transformer(input_path: str):
-    """Load trained transformer from pickle file."""
-    transformer_path = os.path.join(input_path, cons.DEFAULT_TRANSFORMER_FILE)
-    with open(transformer_path, 'rb') as f:
-        return pickle.load(f)
-
-def get_data(input_path, mode):
-    if mode == 'train':
-        data_path = os.path.join(input_path, cons.DEFAULT_INTERNAL_DATA_FILE)
-    else:
-        data_path = os.path.join(input_path, cons.DEFAULT_HOLDOUT_FEATURES_FILE)
-    df = pd.read_csv(data_path)
-    if df.empty:
-        raise ValueError("The input file is empty.")
-    return df
-
 def main():
     args = get_preprocessing_args()
-    output_path = os.path.join(args.output_path, f"preprocess_{args.run_id}")
+    output_path = args.output_path
     os.makedirs(output_path, exist_ok=True)
-    df = get_data(args.input_path, args.mode)
-    
+    df = get_data(args.input_path, args.verbose)
+
     if args.mode == 'train':
         df = df.drop(columns=cons.COLUMNS_TO_DROP)
         df = clean_data(df)
-        df_train, df_val, df_holdout = split_by_user(df)
+        df_train, df_val, df_test = split_data(df, verbose=args.verbose)
         df_train, transformer = preprocess_towards_training(df_train)
         df_val = preprocess_towards_evaluation(df_val, transformer)
-        save_transformer_to_file(transformer, os.path.join(output_path, cons.DEFAULT_TRANSFORMER_FILE), args.verbose)
+        df_test = preprocess_towards_evaluation(df_test, transformer)
+        save_transformer(transformer, output_path, args.verbose)
         save_data_for_training(df_train, output_path)
         save_data_for_validation(df_val, output_path)
-        save_data_for_holdout(df_holdout, output_path)
-
-        if args.verbose:
-            print(f"Saved preprocessed data to {output_path}")
+        save_data_for_test(df_test, output_path, args.verbose)
     
-    else:
-        transformer = get_transformer(args.input_path)
+    elif args.mode == 'inference':
+        transformer = get_transformer(args.transformer_path)
         df = preprocess_towards_evaluation(df, transformer)
         save_data_for_test(df, output_path)
         log(f"Test set saved to {output_path}.", args.verbose)
+
+    else:
+        raise ValueError("Invalid mode.")
 
 if __name__ == '__main__':
     main()
