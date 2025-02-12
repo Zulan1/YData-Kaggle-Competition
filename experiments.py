@@ -2,6 +2,7 @@ from app.time_utils import get_timestamp_str
 import os
 import shutil
 import constants as cons
+import petname
 
 class Experiment:
 
@@ -29,7 +30,7 @@ class Experiment:
 
     @classmethod
     def new(cls, csv_for_training, verbose=False):
-        run_id = get_timestamp_str()
+        run_id = petname.generate(3, '-')
         experiment = cls(run_id, verbose)
         experiment._init_new_experiment()
         experiment.set_input_csv_for_training(csv_for_training)
@@ -51,7 +52,7 @@ class Experiment:
         self.verbose = verbose
         self.run_id = run_id
         if self.verbose:
-            print(f"\nInitializing experiment {self.run_id}...")
+            print(f"\nInitializing experiment {self.run_id}...\n")
 
         self.data_path = self.DATA_PATH
         self.archived_experiments_path = self.ARCHIVED_EXPERIMENTS_PATH
@@ -65,6 +66,8 @@ class Experiment:
         self.experiment_data_path = f"{self.experiment_path}/data"
         self.input_csv_for_training = f"{self.experiment_data_path}/input_for_training.csv"
         self.input_csv_for_prediction = f"{self.experiment_data_path}/input_for_prediction.csv"
+        self.test_features_path = f"{self.preprocess_path}/{self.DEFAULT_TEST_FEATURES_FILE}"
+        self.test_dtypes_path = f"{self.preprocess_path}/{self.DEFAULT_TEST_DTYPES_FILE}"
         self.model_path = f"{self.train_path}/{self.DEFAULT_MODEL_FILE}"
         self.predictions_path = f"{self.predict_path}/{self.DEFAULT_PREDICTIONS_FILE}"
         self.predictions_probabilities_path = f"{self.predict_path}/{self.DEFAULT_PREDICTED_PROBABILITIES_FILE}"

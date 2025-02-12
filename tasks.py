@@ -28,7 +28,7 @@ def pipeline(
     c.run(
         "python preprocess.py "
         "--mode=train "
-        f"--csv-full-path={experiment.input_csv_for_training} "
+        f"--csv-for-preprocessing={experiment.input_csv_for_training} "
         f"--output-path={experiment.preprocess_path} "
         "--verbose",
         hide=False,
@@ -57,24 +57,25 @@ def pipeline(
         f"python predict.py "
         f"--csv-for-prediction={experiment.input_csv_for_prediction} "
         f"--model-path={experiment.model_path} "
-        f"--features-path={experiment.features_path} "
+        f"--test-features-path={experiment.test_features_path} "
+        f"--test-dtypes-path={experiment.test_dtypes_path} "
         f"--output-path={experiment.predict_path} "
         "--verbose",
         hide=False,
         pty=True
     )
 
-    # c.run(
-    #     f"python result.py "
-    #     f"--predictions-path={experiment.predictions_path} "
-    #     f"--predicted-probabilities-path={experiment.predictions_probabilities_path} "
-    #     f"--labels-path={experiment.labels_path} "
-    #     f"--features-path={experiment.features_path} "
-    #     f"--model-path={experiment.model_path} "
-    #     f"--output-path={experiment.result_path}",
-    #     hide=False,
-    #     pty=True
-    # )
+    c.run(
+        f"python result.py "
+        f"--predictions-path={experiment.predictions_path} "
+        f"--predicted-probabilities-path={experiment.predictions_probabilities_path} "
+        f"--labels-path={experiment.labels_path} "
+        f"--features-path={experiment.features_path} "
+        f"--model-path={experiment.model_path} "
+        f"--output-path={experiment.result_path}",
+        hide=False,
+        pty=True
+    )
     
     experiment.finish()
 
@@ -125,8 +126,10 @@ def debug_pipeline(c):
 
 
 @task
-def inference_pipeline(c, run_id, csv_full_path=f"./data/{cons.DEFAULT_EXTERNAL_RAW_TEST_FILE}"):
+def inference_pipeline(c, run_id, csv_for_prediction=DEFAULT_CSV_FOR_PREDICTION):
 
+    print(f"\nStarting inference pipeline using experiment {run_id}...\n")
+    
     try:
         experiment = Experiment.existing(run_id, verbose=True)
     except ValueError as e:
@@ -134,25 +137,27 @@ def inference_pipeline(c, run_id, csv_full_path=f"./data/{cons.DEFAULT_EXTERNAL_
         print("Please provide a valid experiment run_id that exists in the archived_experiments directory")
         return
 
-    c.run(
-        "python preprocess.py "
-        "--mode=inference "
-        f"--csv-full-path={experiment.input_csv_for_prediction} "
-        f"--output-path={experiment.preprocess_path} "
-        f"--transformer-path={experiment.transformer_path} "
-        "--verbose ",
-        hide=False,
-        pty=True
-    )
+    experiment.set_input_csv_for_prediction(csv_for_prediction)
 
-    experiment.set_input_csv_for_prediction(csv_full_path)
+    # c.run(
+    #     "python preprocess.py "
+    #     "--mode=inference "
+    #     f"--csv-for-preprocessing={experiment.input_csv_for_prediction} "
+    #     f"--output-path={experiment.preprocess_path} "
+    #     f"--transformer-path={experiment.transformer_path} "
+    #     "--verbose ",
+    #     hide=False,
+    #     pty=True
+    # )
+
     c.run(
         f"python predict.py "
         f"--csv-for-prediction={experiment.input_csv_for_prediction} "
         f"--model-path={experiment.model_path} "
-        f"--features-path={experiment.features_path} "
+        f"--test-features-path={experiment.test_features_path} "
+        f"--test-dtypes-path={experiment.test_dtypes_path} "
         f"--output-path={experiment.predict_path} "
-        "--verbose ",
+        "--verbose",
         hide=False,
         pty=True
     )

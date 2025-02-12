@@ -61,13 +61,13 @@ def get_train_set(input_path: str) -> pd.DataFrame:
         df_train[col] = df_train[col].astype(dtype)
     return df_train
 
-def get_test_features(test_path: str, features_path: str) -> pd.DataFrame:
+def get_test_features(test_features_path: str, test_dtypes_path: str) -> pd.DataFrame:
     """Get test features from a CSV file."""
     
-    df_test = pd.read_csv(test_path)
+    df_test = pd.read_csv(test_features_path)
     df_test = df_test.copy()
 
-    with open(features_path, 'rb') as f:
+    with open(test_dtypes_path, 'rb') as f:
         dtypes_dict = pickle.load(f)
 
     for col, dtype in dtypes_dict.items():
@@ -79,12 +79,16 @@ def save_predictions(df, output_path, verbose):
     predictions_path = os.path.join(output_path, cons.DEFAULT_PREDICTIONS_FILE)
     """Save predictions to a CSV file."""
     df.to_csv(predictions_path, index=False)
+    if verbose:
+        print(f"Predictions saved to {predictions_path}")
     return
 
 def save_predicted_probabilities(df, output_path, verbose):
     probabilities_path = os.path.join(output_path, cons.DEFAULT_PREDICTED_PROBABILITIES_FILE)
     """Save predicted probabilities to a CSV file."""
     df.to_csv(probabilities_path, index=False)
+    if verbose:
+        print(f"Predicted probabilities saved to {probabilities_path}")
     return
 
 def get_model(model_path: str, verbose: bool) -> Any:

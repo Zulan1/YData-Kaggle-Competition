@@ -24,9 +24,10 @@ def get_predictions(model, df):
 def main():
     args = get_predict_args()
     model = get_model(args.model_path, args.verbose)
-    df = get_test_features(args.csv_for_prediction, args.features_path)
+    df = get_test_features(args.test_features_path, args.test_dtypes_path)
     
-    log(f"Predicting {cons.TARGET_COLUMN}", args.verbose)
+    if args.verbose:
+        print(f"\n\nPredicting {cons.TARGET_COLUMN}...")
 
     predictions = get_predictions(model, df)
     save_predictions(predictions, args.output_path, args.verbose)

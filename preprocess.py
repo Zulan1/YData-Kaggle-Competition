@@ -39,10 +39,10 @@ def main():
     args = get_preprocessing_args()
 
     if args.verbose:
-        print(f"\nPreprocessing data from {args.csv_full_path} to {args.output_path}.")
+        print(f"\nPreprocessing data from {args.csv_for_preprocessing} to {args.output_path}.")
 
     output_path = args.output_path
-    df = get_data(args.csv_full_path, args.verbose)
+    df = get_data(args.csv_for_preprocessing, args.verbose)
 
     if args.mode == 'train':
         df = df.drop(columns=cons.COLUMNS_TO_DROP)
