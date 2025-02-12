@@ -9,3 +9,5 @@ xgboost
 lightgbm
 catboost
 imblearn
+streamlit
+petname

@@ -17,6 +17,14 @@ def save_data_for_test(df: pd.DataFrame, output_path: str, verbose: bool) -> Non
     labels.to_csv(os.path.join(output_path, cons.DEFAULT_TEST_LABELS_FILE), index=False)
     return
 
+def save_data_for_external_test(df: pd.DataFrame, output_path: str, verbose: bool) -> None:
+    """Save holdout features and labels to separate CSV files."""
+    features = df
+    features.to_csv(os.path.join(output_path, cons.DEFAULT_EXTERNAL_TEST_FEATURES_FILE), index=False)
+    dtypes_dict = features.dtypes.astype(str).to_dict()
+    with open(os.path.join(output_path, cons.DEFAULT_EXTERNAL_TEST_DTYPES_FILE), 'wb') as f:
+        pickle.dump(dtypes_dict, f)
+
 def save_data_for_validation(df: pd.DataFrame, output_path: str) -> None:
     """Save validation features and labels to separate CSV files."""
     df.to_csv(os.path.join(output_path, cons.DEFAULT_VAL_SET_FILE), index=False)
@@ -53,27 +61,34 @@ def get_train_set(input_path: str) -> pd.DataFrame:
         df_train[col] = df_train[col].astype(dtype)
     return df_train
 
-def get_test_features(input_path: str) -> pd.DataFrame:
+def get_test_features(test_features_path: str, test_dtypes_path: str) -> pd.DataFrame:
     """Get test features from a CSV file."""
-    df_test = pd.read_csv(os.path.join(input_path, cons.DEFAULT_TEST_FEATURES_FILE))
+    
+    df_test = pd.read_csv(test_features_path)
     df_test = df_test.copy()
-    with open(os.path.join(input_path, cons.DEFAULT_TEST_DTYPES_FILE), 'rb') as f:
+
+    with open(test_dtypes_path, 'rb') as f:
         dtypes_dict = pickle.load(f)
+
     for col, dtype in dtypes_dict.items():
         df_test[col] = df_test[col].astype(dtype)
-    print("df_test dtypes loaded", df_test.dtypes)
+
     return df_test
 
 def save_predictions(df, output_path, verbose):
     predictions_path = os.path.join(output_path, cons.DEFAULT_PREDICTIONS_FILE)
     """Save predictions to a CSV file."""
     df.to_csv(predictions_path, index=False)
+    if verbose:
+        print(f"Predictions saved to {predictions_path}")
     return
 
 def save_predicted_probabilities(df, output_path, verbose):
     probabilities_path = os.path.join(output_path, cons.DEFAULT_PREDICTED_PROBABILITIES_FILE)
     """Save predicted probabilities to a CSV file."""
     df.to_csv(probabilities_path, index=False)
+    if verbose:
+        print(f"Predicted probabilities saved to {probabilities_path}")
     return
 
 def get_model(model_path: str, verbose: bool) -> Any:
@@ -106,5 +121,5 @@ def save_transformer(transformer: DataTransformer, output_path: str, verbose: bo
 
 def get_data(input_path: str, verbose: bool) -> pd.DataFrame:
     """Get data from a CSV file."""
-    log(f"Loading data from {input_path}", verbose)
+    print(f"Loading data from {input_path}")
     return pd.read_csv(input_path)

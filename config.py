@@ -25,5 +25,5 @@ DEFAULT_MODEL_PARAMS = {
     "boosting_type": "Ordered",  # "Plain" is faster, "Ordered" is better for small datasets
     "subsample": 0.8,  # Helps prevent overfitting (sample 80% of data per iteration)
     "task_type": "CPU",  # 🚀 Run on local machine (CPU)
-    "verbose": 100
+    "verbose": 500
 }

@@ -58,9 +58,14 @@ def split_data(df, split_ratios=conf.TRAIN_TEST_VAL_SPLIT, random_state=conf.RAN
 
     if verbose:
 
+        print("\nSplitting Statistics:")
         print(f"Train sessions: {train_pct:.2f}% of total, CTR: {train_ctr:.4f}")
         print(f"Validation sessions: {val_pct:.2f}% of total, CTR: {val_ctr:.4f}")
         print(f"Test sessions: {test_pct:.2f}% of total, CTR: {test_ctr:.4f}")
+
+        if conf.LEAVE_ONE_OUT:
+            print("Test product left out of training set: ", test_product)
+
 
     assert test_product not in df_train['product'].unique(), f"df_train contains the product to leave: {test_product}"
 

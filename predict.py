@@ -24,11 +24,13 @@ def get_predictions(model, df):
 def main():
     args = get_predict_args()
     model = get_model(args.model_path, args.verbose)
-    df = get_test_features(args.input_path)
-    os.makedirs(args.output_path, exist_ok=True)
-    log(f"Predicting {cons.TARGET_COLUMN}", args.verbose)
+    df = get_test_features(args.test_features_path, args.test_dtypes_path)
+    
+    print(df.dtypes)
+    if args.verbose:
+        print(f"\n\nPredicting {cons.TARGET_COLUMN}...")
 
-    predictions = get_predictions(model, df)
+    predictions = get_predictions(model, df) 
     save_predictions(predictions, args.output_path, args.verbose)
     
     probabilities = get_predicted_probabilities(model, df)

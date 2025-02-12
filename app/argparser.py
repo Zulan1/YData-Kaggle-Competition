@@ -93,7 +93,7 @@ def get_train_args():
 
 def get_preprocessing_args():
     parser = argparse.ArgumentParser(description='Data Processing Pipeline')
-    parser.add_argument('--input-path', type=str, help='Input data path')
+    parser.add_argument('--csv-for-preprocessing', type=str, help='The full path to the input csv file')
     parser.add_argument('--output-path', type=str, help='Output directory of all proccessed csv files: train, val, test')
     parser.add_argument('--verbose', action='store_true', help='Print additional information')
     parser.add_argument('--mode', type=str, default='train', help='Mode: train, test')
@@ -102,11 +102,11 @@ def get_preprocessing_args():
 
 def get_predict_args():
     parser = argparse.ArgumentParser(description='Predict on new data')
-    parser.add_argument('--input-path', type=str, required=True, help='Path to input data for prediction (no labels)')
+    parser.add_argument('--model-path', type=str, help='path of the model to use for prediction')
+    parser.add_argument('--test-features-path', type=str, help='path to the test features')
+    parser.add_argument('--test-dtypes-path', type=str, help='path of the features dtypes to use for prediction')
     parser.add_argument('--output-path', type=str, help='Path to output data for prediction')
     parser.add_argument('--verbose', action='store_true', help='Print additional information')
-    parser.add_argument('--model-path', type=str, help='path of the model to use for prediction')
-    parser.add_argument('--transformer-path', type=str, default=None,help='Path to transformer file')
     return parser.parse_args()
 
 def get_result_args():
