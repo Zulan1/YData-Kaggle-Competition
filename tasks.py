@@ -3,8 +3,18 @@ from invoke import task
 from app.time_utils import get_timestamp_str
 from experiments import Experiment
 
+DEFAULT_CSV_FOR_TRAINING = f"{Experiment.DATA_PATH}/{Experiment.DEFAULT_INPUT_CSV_FOR_TRAINING}"
+DEFAULT_CSV_FOR_PREDICTION = f"{Experiment.DATA_PATH}/{Experiment.DEFAULT_INPUT_CSV_FOR_PREDICTION}"
+
 @task
-def pipeline(c, csv_full_path=f"./data/{cons.DEFAULT_INTERNAL_DATA_FILE}", n_trials=50, gpu=False, run_id=None):
+def pipeline(
+    c,
+    csv_for_training=DEFAULT_CSV_FOR_TRAINING, 
+    csv_for_prediction=DEFAULT_CSV_FOR_PREDICTION, 
+    n_trials=50, 
+    gpu=False, 
+    run_id=None):
+
     """Run full training pipeline:
     1. Preprocess training data
     2. Train model with RandomForest defaults
@@ -13,7 +23,7 @@ def pipeline(c, csv_full_path=f"./data/{cons.DEFAULT_INTERNAL_DATA_FILE}", n_tri
     5. Analyze results
     """
 
-    experiment = Experiment.new_experiment(csv_full_path)
+    experiment = Experiment.new(csv_for_training, verbose=True)
 
     c.run(
         "python preprocess.py "
@@ -42,27 +52,29 @@ def pipeline(c, csv_full_path=f"./data/{cons.DEFAULT_INTERNAL_DATA_FILE}", n_tri
         pty=True
     )
     
+    experiment.set_input_csv_for_prediction(csv_for_prediction)
     c.run(
         f"python predict.py "
+        f"--csv-for-prediction={experiment.input_csv_for_prediction} "
         f"--model-path={experiment.model_path} "
-        f"--csv-full-path={experiment.features_path} "
+        f"--features-path={experiment.features_path} "
         f"--output-path={experiment.predict_path} "
         "--verbose",
         hide=False,
         pty=True
     )
 
-    c.run(
-        f"python result.py "
-        f"--predictions-path={experiment.predictions_path} "
-        f"--predicted-probabilities-path={experiment.predictions_probabilities_path} "
-        f"--labels-path={experiment.labels_path} "
-        f"--features-path={experiment.features_path} "
-        f"--model-path={experiment.model_path} "
-        f"--output-path={experiment.result_path}",
-        hide=False,
-        pty=True
-    )
+    # c.run(
+    #     f"python result.py "
+    #     f"--predictions-path={experiment.predictions_path} "
+    #     f"--predicted-probabilities-path={experiment.predictions_probabilities_path} "
+    #     f"--labels-path={experiment.labels_path} "
+    #     f"--features-path={experiment.features_path} "
+    #     f"--model-path={experiment.model_path} "
+    #     f"--output-path={experiment.result_path}",
+    #     hide=False,
+    #     pty=True
+    # )
     
     experiment.finish()
 
@@ -115,8 +127,12 @@ def debug_pipeline(c):
 @task
 def inference_pipeline(c, run_id, csv_full_path=f"./data/{cons.DEFAULT_EXTERNAL_RAW_TEST_FILE}"):
 
-    experiment = Experiment.existing_experiment(run_id)
-    experiment.set_input_csv_for_prediction(csv_full_path)
+    try:
+        experiment = Experiment.existing(run_id, verbose=True)
+    except ValueError as e:
+        print(f"Error: {e}")
+        print("Please provide a valid experiment run_id that exists in the archived_experiments directory")
+        return
 
     c.run(
         "python preprocess.py "
@@ -129,12 +145,16 @@ def inference_pipeline(c, run_id, csv_full_path=f"./data/{cons.DEFAULT_EXTERNAL_
         pty=True
     )
 
+    experiment.set_input_csv_for_prediction(csv_full_path)
     c.run(
         f"python predict.py "
-        f"--input-path={experiment.input_csv_for_prediction} "
-        f"--output-path={experiment.predict_path} "
+        f"--csv-for-prediction={experiment.input_csv_for_prediction} "
         f"--model-path={experiment.model_path} "
+        f"--features-path={experiment.features_path} "
+        f"--output-path={experiment.predict_path} "
         "--verbose ",
         hide=False,
         pty=True
     )
+
+    experiment.finish()

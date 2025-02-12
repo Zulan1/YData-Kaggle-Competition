@@ -5,9 +5,11 @@ import constants as cons
 
 class Experiment:
 
-    DATA_PATH = 'data/'
-    DEFAULT_INTERNAL_DATA_FILE = 'train_dataset_full.csv'
-    DEFAULT_EXTERNAL_RAW_TEST_FILE = 'X_test_1st_raw.csv'
+    DATA_PATH = 'data'
+    ARCHIVED_EXPERIMENTS_PATH = 'archived_experiments'
+    
+    DEFAULT_INPUT_CSV_FOR_TRAINING = 'train_dataset_full.csv'
+    DEFAULT_INPUT_CSV_FOR_PREDICTION = 'X_test_1st_raw.csv'
 
     DEFAULT_TRAIN_SET_FILE = 'train.csv'
     DEFAULT_VAL_SET_FILE = 'val.csv'
@@ -25,31 +27,37 @@ class Experiment:
     DEFAULT_TRANSFORMER_FILE = 'transformer.pkl'
     DEFAULT_MODEL_FILE = 'model.pkl'
 
-    @staticmethod
-    def new_experiment(csv_full_path, verbose=False):
+    @classmethod
+    def new(cls, csv_for_training, verbose=False):
         run_id = get_timestamp_str()
-        experiment = Experiment(run_id, verbose)
-        experiment.init_new_experiment()
-        experiment.set_input_csv_for_training(csv_full_path)
+        experiment = cls(run_id, verbose)
+        experiment._init_new_experiment()
+        experiment.set_input_csv_for_training(csv_for_training)
         return experiment
     
-    @staticmethod
-    def existing_experiment(run_id, verbose=False):
-        return Experiment(run_id, verbose)
+    @classmethod
+    def existing(cls, run_id, verbose=False):
+
+        archived_experiment_path = f"{cls.ARCHIVED_EXPERIMENTS_PATH}/experiment_{run_id}"
+        if not os.path.exists(archived_experiment_path):
+            raise ValueError(f"Experiment {run_id} does not exist at {archived_experiment_path}")
+        
+        experiment = cls(run_id, verbose)
+        experiment._restore_from_archive()
+        return experiment
 
     def __init__(self, run_id, verbose=False):
 
         self.verbose = verbose
-
         self.run_id = run_id
         if self.verbose:
-            print(f"Creating experiment {self.run_id}...")
+            print(f"\nInitializing experiment {self.run_id}...")
 
-        self.data_path = "data/"
-        self.archived_experiments_path = "archived_experiments/"
+        self.data_path = self.DATA_PATH
+        self.archived_experiments_path = self.ARCHIVED_EXPERIMENTS_PATH
 
         self.experiment_name = f"experiment_{self.run_id}"
-        self.experiment_path = f"{self.data_path}/{self.experiment_name}"
+        self.experiment_path = f"{self.DATA_PATH}/{self.experiment_name}"
         self.train_path = f"{self.experiment_path}/train"
         self.preprocess_path = f"{self.experiment_path}/preprocess"
         self.predict_path = f"{self.experiment_path}/predict"
@@ -64,22 +72,24 @@ class Experiment:
         self.features_path = f"{self.preprocess_path}/{self.DEFAULT_TEST_FEATURES_FILE}"
         self.transformer_path = f"{self.preprocess_path}/{self.DEFAULT_TRANSFORMER_FILE}"
 
-    def set_input_csv_for_training(self, csv_full_path):
-        self.input_csv_for_training = csv_full_path
-        self.save_csv(csv_full_path, self.input_csv_for_training)
-
-    def set_input_csv_for_prediction(self, csv_full_path):
-        self.input_csv_for_prediction = csv_full_path
-        self.save_csv(csv_full_path, self.input_csv_for_prediction)
-
-    def init_new_experiment(self):
+    def _init_new_experiment(self):
         self.clear_data_path(self.data_path)
         self.create_experiment_folders()
+
+    def _restore_from_archive(self):
+        self.clear_data_path(self.data_path)
+        shutil.copytree(f"{self.archived_experiments_path}/{self.experiment_name}", self.experiment_path)
+
+    def set_input_csv_for_training(self, csv_for_training):
+        self._save_csv(csv_for_training, self.input_csv_for_training)
+
+    def set_input_csv_for_prediction(self, csv_full_path):
+        self._save_csv(csv_full_path, self.input_csv_for_prediction)
 
     def clear_data_path(self, data_path):
         for item in os.listdir(data_path):
             item_path = os.path.join(data_path, item)
-            if item != 'best_model' and item != self.DEFAULT_INTERNAL_DATA_FILE and item != self.DEFAULT_EXTERNAL_RAW_TEST_FILE:
+            if item != 'best_model' and item != self.DEFAULT_INPUT_CSV_FOR_TRAINING and item != self.DEFAULT_INPUT_CSV_FOR_PREDICTION:
                 if os.path.isfile(item_path):
                     os.remove(item_path)
                 elif os.path.isdir(item_path):
@@ -92,11 +102,16 @@ class Experiment:
         os.makedirs(self.result_path)
         os.makedirs(self.experiment_data_path)
 
-    def save_csv(self, from_path, to_path):
+    def _save_csv(self, from_path, to_path):
         if from_path != to_path:
             shutil.copy(from_path, to_path)
 
     def finish(self):
+        if os.path.exists(f"{self.archived_experiments_path}/{self.experiment_name}"):
+            shutil.rmtree(f"{self.archived_experiments_path}/{self.experiment_name}")
         shutil.copytree(self.experiment_path, f"{self.archived_experiments_path}/{self.experiment_name}")
+
+        if self.verbose:
+            print(f"\nExperiment {self.run_id} finished and archived at {self.archived_experiments_path}/{self.experiment_name}")
     
 

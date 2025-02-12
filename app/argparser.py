@@ -102,11 +102,12 @@ def get_preprocessing_args():
 
 def get_predict_args():
     parser = argparse.ArgumentParser(description='Predict on new data')
-    parser.add_argument('--csv-full-path', type=str, required=True, help='Path to input data for prediction (no labels)')
+    parser.add_argument('--csv-for-prediction', type=str, required=True, help='Path to input data for prediction (no labels)')
+    parser.add_argument('--model-path', type=str, help='path of the model to use for prediction')
+    parser.add_argument('--features-path', type=str, help='path of the features to use for prediction')
+    parser.add_argument('--transformer-path', type=str, default=None,help='Path to transformer file')
     parser.add_argument('--output-path', type=str, help='Path to output data for prediction')
     parser.add_argument('--verbose', action='store_true', help='Print additional information')
-    parser.add_argument('--model-path', type=str, help='path of the model to use for prediction')
-    parser.add_argument('--transformer-path', type=str, default=None,help='Path to transformer file')
     return parser.parse_args()
 
 def get_result_args():

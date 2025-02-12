@@ -61,14 +61,18 @@ def get_train_set(input_path: str) -> pd.DataFrame:
         df_train[col] = df_train[col].astype(dtype)
     return df_train
 
-def get_test_features(input_path: str) -> pd.DataFrame:
+def get_test_features(test_path: str, features_path: str) -> pd.DataFrame:
     """Get test features from a CSV file."""
-    df_test = pd.read_csv(os.path.join(input_path, cons.DEFAULT_TEST_FEATURES_FILE))
+    
+    df_test = pd.read_csv(test_path)
     df_test = df_test.copy()
-    with open(os.path.join(input_path, cons.DEFAULT_TEST_DTYPES_FILE), 'rb') as f:
+
+    with open(features_path, 'rb') as f:
         dtypes_dict = pickle.load(f)
+
     for col, dtype in dtypes_dict.items():
         df_test[col] = df_test[col].astype(dtype)
+
     return df_test
 
 def save_predictions(df, output_path, verbose):
@@ -113,5 +117,5 @@ def save_transformer(transformer: DataTransformer, output_path: str, verbose: bo
 
 def get_data(input_path: str, verbose: bool) -> pd.DataFrame:
     """Get data from a CSV file."""
-    log(f"Loading data from {input_path}", verbose)
+    print(f"Loading data from {input_path}")
     return pd.read_csv(input_path)

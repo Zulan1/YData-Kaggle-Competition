@@ -79,7 +79,8 @@ def main():
         df = df.dropna()
         df = preprocess_towards_evaluation(df, transformer)
         save_data_for_external_test(df, output_path, args.verbose)
-        log(f"Test set saved to {output_path}.", args.verbose)
+        if args.verbose:
+            print(f"Test set saved to {output_path}.")
 
     else:
         raise ValueError("Invalid mode.")
