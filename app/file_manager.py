@@ -22,7 +22,7 @@ def save_data_for_external_test(df: pd.DataFrame, output_path: str, verbose: boo
     features = df
     features.to_csv(os.path.join(output_path, cons.DEFAULT_EXTERNAL_TEST_FEATURES_FILE), index=False)
     dtypes_dict = features.dtypes.astype(str).to_dict()
-    with open(os.path.join(output_path, cons.DEFAULT_TEST_DTYPES_FILE), 'wb') as f:
+    with open(os.path.join(output_path, cons.DEFAULT_EXTERNAL_TEST_DTYPES_FILE), 'wb') as f:
         pickle.dump(dtypes_dict, f)
 
 def save_data_for_validation(df: pd.DataFrame, output_path: str) -> None:

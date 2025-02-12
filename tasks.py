@@ -10,7 +10,6 @@ DEFAULT_CSV_FOR_PREDICTION = f"{Experiment.DATA_PATH}/{Experiment.DEFAULT_INPUT_
 def pipeline(
     c,
     csv_for_training=DEFAULT_CSV_FOR_TRAINING, 
-    csv_for_prediction=DEFAULT_CSV_FOR_PREDICTION, 
     n_trials=50, 
     gpu=False, 
     run_id=None):
@@ -52,10 +51,8 @@ def pipeline(
         pty=True
     )
     
-    experiment.set_input_csv_for_prediction(csv_for_prediction)
     c.run(
         f"python predict.py "
-        f"--csv-for-prediction={experiment.input_csv_for_prediction} "
         f"--model-path={experiment.model_path} "
         f"--test-features-path={experiment.test_features_path} "
         f"--test-dtypes-path={experiment.test_dtypes_path} "
@@ -129,7 +126,7 @@ def debug_pipeline(c):
 def inference_pipeline(c, run_id, csv_for_prediction=DEFAULT_CSV_FOR_PREDICTION):
 
     print(f"\nStarting inference pipeline using experiment {run_id}...\n")
-    
+
     try:
         experiment = Experiment.existing(run_id, verbose=True)
     except ValueError as e:
@@ -139,23 +136,22 @@ def inference_pipeline(c, run_id, csv_for_prediction=DEFAULT_CSV_FOR_PREDICTION)
 
     experiment.set_input_csv_for_prediction(csv_for_prediction)
 
-    # c.run(
-    #     "python preprocess.py "
-    #     "--mode=inference "
-    #     f"--csv-for-preprocessing={experiment.input_csv_for_prediction} "
-    #     f"--output-path={experiment.preprocess_path} "
-    #     f"--transformer-path={experiment.transformer_path} "
-    #     "--verbose ",
-    #     hide=False,
-    #     pty=True
-    # )
+    c.run(
+        "python preprocess.py "
+        "--mode=inference "
+        f"--csv-for-preprocessing={experiment.input_csv_for_prediction} "
+        f"--transformer-path={experiment.transformer_path} "
+        f"--output-path={experiment.preprocess_path} "
+        "--verbose ",
+        hide=False,
+        pty=True
+    )
 
     c.run(
         f"python predict.py "
-        f"--csv-for-prediction={experiment.input_csv_for_prediction} "
         f"--model-path={experiment.model_path} "
-        f"--test-features-path={experiment.test_features_path} "
-        f"--test-dtypes-path={experiment.test_dtypes_path} "
+        f"--test-features-path={experiment.external_test_features_path} "
+        f"--test-dtypes-path={experiment.external_test_dtypes_path} "
         f"--output-path={experiment.predict_path} "
         "--verbose",
         hide=False,

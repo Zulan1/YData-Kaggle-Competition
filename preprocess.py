@@ -48,8 +48,6 @@ def main():
         df = df.drop(columns=cons.COLUMNS_TO_DROP)
         df = clean_data(df)
 
-        df = df.head(1000)
-
         df_train, df_val, df_test = split_data(df, verbose=args.verbose)
 
         if args.verbose:
@@ -77,6 +75,8 @@ def main():
     elif args.mode == 'inference':
         transformer = get_transformer(args.transformer_path)
         df = df.dropna()
+        df = df.drop(columns=cons.COLUMNS_TO_DROP)
+
         df = preprocess_towards_evaluation(df, transformer)
         save_data_for_external_test(df, output_path, args.verbose)
         if args.verbose:

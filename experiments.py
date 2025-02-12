@@ -19,6 +19,8 @@ class Experiment:
     DEFAULT_TEST_FEATURES_FILE = 'test_features.csv'
     DEFAULT_TEST_DTYPES_FILE = 'test_dtypes.pkl'
     DEFAULT_TEST_LABELS_FILE = 'test_labels.csv'
+    DEFAULT_EXTERNAL_TEST_FEATURES_FILE = 'external_test_features.csv'
+    DEFAULT_EXTERNAL_TEST_DTYPES_FILE = 'external_test_dtypes.pkl'
 
     DEFAULT_PREDICTIONS_FILE = 'predictions.csv'
     DEFAULT_PREDICTED_PROBABILITIES_FILE = 'predicted_probabilities.csv'
@@ -68,6 +70,8 @@ class Experiment:
         self.input_csv_for_prediction = f"{self.experiment_data_path}/input_for_prediction.csv"
         self.test_features_path = f"{self.preprocess_path}/{self.DEFAULT_TEST_FEATURES_FILE}"
         self.test_dtypes_path = f"{self.preprocess_path}/{self.DEFAULT_TEST_DTYPES_FILE}"
+        self.external_test_features_path = f"{self.preprocess_path}/{self.DEFAULT_EXTERNAL_TEST_FEATURES_FILE}"
+        self.external_test_dtypes_path = f"{self.preprocess_path}/{self.DEFAULT_EXTERNAL_TEST_DTYPES_FILE}"
         self.model_path = f"{self.train_path}/{self.DEFAULT_MODEL_FILE}"
         self.predictions_path = f"{self.predict_path}/{self.DEFAULT_PREDICTIONS_FILE}"
         self.predictions_probabilities_path = f"{self.predict_path}/{self.DEFAULT_PREDICTED_PROBABILITIES_FILE}"

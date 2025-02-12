@@ -26,10 +26,11 @@ def main():
     model = get_model(args.model_path, args.verbose)
     df = get_test_features(args.test_features_path, args.test_dtypes_path)
     
+    print(df.dtypes)
     if args.verbose:
         print(f"\n\nPredicting {cons.TARGET_COLUMN}...")
 
-    predictions = get_predictions(model, df)
+    predictions = get_predictions(model, df) 
     save_predictions(predictions, args.output_path, args.verbose)
     
     probabilities = get_predicted_probabilities(model, df)
