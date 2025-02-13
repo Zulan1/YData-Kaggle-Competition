@@ -80,7 +80,7 @@ def save_predictions(df, output_path, verbose):
     """Save predictions to a CSV file."""
     df.to_csv(predictions_path, index=False)
     if verbose:
-        print(f"Predictions saved to {predictions_path}")
+        log(f"[file_manager.py] Predictions saved to {predictions_path}", verbose)
     return
 
 def save_predicted_probabilities(df, output_path, verbose):
@@ -88,7 +88,7 @@ def save_predicted_probabilities(df, output_path, verbose):
     """Save predicted probabilities to a CSV file."""
     df.to_csv(probabilities_path, index=False)
     if verbose:
-        print(f"Predicted probabilities saved to {probabilities_path}")
+        log(f"[file_manager.py] Predicted probabilities saved to {probabilities_path}", verbose)
     return
 
 def get_model(model_path: str, verbose: bool) -> Any:
@@ -116,10 +116,10 @@ def save_transformer(transformer: DataTransformer, output_path: str, verbose: bo
     """Save a transformer to a pickle file."""
     with open(transformer_path, 'wb') as f:
         pickle.dump(transformer, f)
-    log(f"Transformer saved to {transformer_path}", verbose)
+    log(f"[file_manager.py] Transformer saved to {transformer_path}", verbose)
     return
 
 def get_data(input_path: str, verbose: bool) -> pd.DataFrame:
     """Get data from a CSV file."""
-    print(f"Loading data from {input_path}")
+    log(f"[file_manager.py] Loading data from {input_path}", verbose)
     return pd.read_csv(input_path)

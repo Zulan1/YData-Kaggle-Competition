@@ -1,5 +1,9 @@
 import pandas as pd
 import numpy as np
+import constants as cons
+from feature_definitions import Feature
+from typing import List
+
 
 # -----------------------------------------------------------------------------
 # Helper to generate function for original features.
@@ -77,15 +81,6 @@ def session_day_of_week_func(df: pd.DataFrame) -> pd.Series:
     series.name = "session_day_of_week"
     return series
 
-# S9. next_day_session_indicator
-def next_day_session_indicator_func(df: pd.DataFrame) -> pd.Series:
-    ddf = df.sort_values(["user_id", "DateTime"])
-    session_date = ddf["DateTime"].dt.date
-    shifted = ddf.groupby("user_id")["DateTime"].shift(-1).dt.date
-    series = (shifted > session_date).astype(int)
-    series.name = "next_day_session_indicator"
-    return series.fillna(0)
-
 # S10. daily_session_sequence
 def daily_session_sequence_func(df: pd.DataFrame) -> pd.Series:
     ddf = df.copy()
@@ -97,9 +92,34 @@ def daily_session_sequence_func(df: pd.DataFrame) -> pd.Series:
 
 # S11. duplicate_timestamp_session_count
 def duplicate_timestamp_session_count_func(df: pd.DataFrame) -> pd.Series:
-    series = df.groupby(["user_id", "DateTime"])["DateTime"].transform("count") - 1
+    """
+    For each user, computes the number of duplicate sessions that share the same timestamp on each day,
+    and returns the maximum duplicate count over all days, clipped at an upper bound of 10.
+
+    Process:
+      1. Extract the session_date from DateTime.
+      2. For each (user, session_date, DateTime) group, compute the duplicate count (i.e. count - 1).
+      3. For each (user, session_date), calculate the maximum duplicate count for that day.
+      4. For each user, take the maximum duplicate count over all days.
+      5. Clip the result to a maximum of 10.
+    """
+    ddf = df.copy()
+    # Extract the session date from DateTime
+    ddf["session_date"] = ddf["DateTime"].dt.date
+
+    # Compute the duplicate count for each row by grouping by user, session_date, and DateTime; subtract 1 for the current row.
+    ddf["dup_count"] = ddf.groupby(["user_id", "session_date", "DateTime"])["DateTime"].transform("count") - 1
+
+    # For each user and each day, get the maximum duplicate count on that day.
+    ddf["max_dup_day"] = ddf.groupby(["user_id", "session_date"])["dup_count"].transform("max")
+
+    # For each user, take the maximum duplicate count among all days.
+    ddf["max_dup_over_days"] = ddf.groupby("user_id")["max_dup_day"].transform("max")
+
+    # Clip the maximum duplicate count at 10.
+    series = ddf["max_dup_over_days"].clip(upper=10)
     series.name = "duplicate_timestamp_session_count"
-    return series.clip(lower=0)
+    return series.astype(int)
 
 # S12. product_diversity_same_timestamp
 def product_diversity_same_timestamp_func(df: pd.DataFrame) -> pd.Series:
@@ -113,20 +133,15 @@ def webpage_diversity_same_timestamp_func(df: pd.DataFrame) -> pd.Series:
     series.name = "webpage_diversity_same_timestamp"
     return series
 
-# U1. total_sessions_count
-def total_sessions_count_func(df: pd.DataFrame) -> pd.Series:
-    series = df.groupby("user_id").cumcount() + 1
-    series = series.clip(upper=10)
-    series.name = "total_sessions_count"
-    return series
-
 # U2. is_high_volume_user
 def is_high_volume_user_func(df: pd.DataFrame) -> pd.Series:
-    counts = df.groupby("user_id").size()
-    threshold = counts.quantile(0.95)
-    series = df["user_id"].map(lambda u: 1 if counts.loc[u] >= threshold else 0)
+    ddf = df.copy()
+    ddf["session_date"] = ddf["DateTime"].dt.date
+    ddf["daily_count"] = ddf.groupby(["session_date", "user_id"])["session_date"].transform("size")
+    ddf["daily_threshold"] = ddf.groupby("session_date")["daily_count"].transform(lambda x: x.quantile(0.95))
+    series = (ddf["daily_count"] >= ddf["daily_threshold"]).astype(int)
     series.name = "is_high_volume_user"
-    return series.astype(int)
+    return series
 
 # U3a. distinct_products_count
 def distinct_products_count_func(df: pd.DataFrame) -> pd.Series:
@@ -152,66 +167,12 @@ def distinct_webpages_count_func(df: pd.DataFrame) -> pd.Series:
     series.name = "distinct_webpages_count"
     return series
 
-# U4a. most_common_category
-def most_common_category_func(df: pd.DataFrame) -> pd.Series:
-    """
-    For each row, returns the mode of the product_category values across all rows for that user.
-    
-    Assumes that the product_category column contains no NaNs.
-    Raises ValueError if any NaNs are detected.
-    """
-    # Check for NaNs in product_category.
-    if df["product_category"].isnull().any():
-        raise ValueError("NaN detected in product_category; input must not contain NaN values.")
-    
-    # Group by user_id and compute the mode.
-    user_mode = df.groupby("user_id")["product_category"].agg(lambda x: x.mode().iloc[0])
-    
-    # Map the computed mode back to each row based on user_id.
-    result = df["user_id"].map(user_mode)
-    result.name = "most_common_category"
-    return result.astype("string")
-
-# U4b. most_common_campaign
-def most_common_campaign_func(df: pd.DataFrame) -> pd.Series:
-    """
-    For each row, returns the mode of the campaign_id values across all rows for that user.
-    
-    Assumes that the campaign_id column contains no NaNs.
-    Raises ValueError if any NaNs are detected.
-    """
-    # Check for NaNs in campaign_id.
-    if df["campaign_id"].isnull().any():
-        raise ValueError("NaN detected in campaign_id; input must not contain NaN values.")
-    
-    # Group by user_id and compute the mode.
-    user_mode = df.groupby("user_id")["campaign_id"].agg(lambda x: x.mode().iloc[0])
-    
-    # Map the computed mode back to each row based on user_id.
-    result = df["user_id"].map(user_mode)
-    result.name = "most_common_campaign"
-    return result.astype("string")
-
 # U4c. most_common_time_of_day
 def most_common_time_of_day_func(df: pd.DataFrame) -> pd.Series:
-    """
-    For each row, returns the mode (or one of the modes) of the session_time_of_day values
-    across all rows for that user.
-    
-    Assumes that session_time_of_day (computed from DateTime) contains no NaNs.
-    Raises ValueError if any NaNs are detected.
-    """
-    # Compute the session_time_of_day using the previously defined function.
     session_time = session_time_of_day_func(df)
-    
-    # Ensure no NaNs exist.
     if session_time.isnull().any():
         raise ValueError("NaN detected in session_time_of_day; input must not contain NaN values.")
-    
-    # Group by user_id and compute the mode.
     user_mode = session_time.groupby(df["user_id"]).agg(lambda x: x.mode().iloc[0])
-    
-    # Map the computed user-level mode back onto each row.
     result = df["user_id"].map(user_mode)
     result.name = "most_common_time_of_day"
     return result.astype("string")
@@ -233,7 +194,7 @@ def sessions_with_min_gap_count_func(df: pd.DataFrame) -> pd.Series:
 def excess_duplicate_timestamps_func(df: pd.DataFrame) -> pd.Series:
     dup_counts = df.groupby(["user_id", "DateTime"]).size().reset_index(name="count")
     max_dup_by_user = dup_counts.groupby("user_id")["count"].max()
-    threshold = max_dup_by_user.quantile(0.95)
+    threshold = max_dup_by_user.quantile(0.99)
     series = df["user_id"].map(lambda u: 1 if max_dup_by_user.loc[u] >= threshold else 0)
     series.name = "excess_duplicate_timestamps"
     return series.astype(int)
@@ -249,21 +210,225 @@ def early_morning_sessions_count_func(df: pd.DataFrame) -> pd.Series:
 
 # U9a. user_product_diversity
 def user_product_diversity_func(df: pd.DataFrame) -> pd.Series:
-    series = df.groupby("user_id")["product"].transform("nunique").clip(upper=5)
-    series.name = "user_product_diversity"
-    return series
+    """
+    Calculates the average daily diversity of products for each user.
+    
+    For every day a user is active, the number of unique products is computed.
+    Then, for each user, the average diversity is taken over all active days,
+    rounded up to the nearest integer and clipped at a maximum of 5.
+    
+    This is a user-based, non-categorical feature.
+    """
+    ddf = df.copy()
+    ddf["session_date"] = ddf["DateTime"].dt.date
+    # Calculate daily product diversity for each user.
+    daily_diversity = ddf.groupby(["user_id", "session_date"])["product"].nunique()
+    # Compute the average daily diversity per user.
+    avg_diversity = daily_diversity.groupby("user_id").mean()
+    # Round up and clip at 5.
+    avg_diversity_ceiled = np.ceil(avg_diversity).clip(upper=5)
+    # Map the computed value back to each user.
+    result = ddf["user_id"].map(avg_diversity_ceiled)
+    result.name = "user_product_diversity"
+    return result.astype(int)
 
 # U9b. user_campaign_diversity
 def user_campaign_diversity_func(df: pd.DataFrame) -> pd.Series:
-    series = df.groupby("user_id")["campaign_id"].transform("nunique").clip(upper=5)
-    series.name = "user_campaign_diversity"
-    return series
+    """
+    Calculates the average daily diversity of campaigns for each user.
+    
+    For every day a user is active, the number of unique campaigns is computed.
+    Then, for each user, the average diversity is taken over all active days,
+    rounded up to the nearest integer and clipped at a maximum of 5.
+    
+    This is a user-based, non-categorical feature.
+    """
+    ddf = df.copy()
+    ddf["session_date"] = ddf["DateTime"].dt.date
+    # Calculate daily campaign diversity for each user.
+    daily_diversity = ddf.groupby(["user_id", "session_date"])["campaign_id"].nunique()
+    # Compute the average daily diversity per user.
+    avg_diversity = daily_diversity.groupby("user_id").mean()
+    # Round up and clip at 5.
+    avg_diversity_ceiled = np.ceil(avg_diversity).clip(upper=5)
+    # Map the computed value back to each user.
+    result = ddf["user_id"].map(avg_diversity_ceiled)
+    result.name = "user_campaign_diversity"
+    return result.astype(int)
 
 # U9c. user_webpage_diversity
 def user_webpage_diversity_func(df: pd.DataFrame) -> pd.Series:
-    series = df.groupby("user_id")["webpage_id"].transform("nunique").clip(upper=5)
-    series.name = "user_webpage_diversity"
-    return series
+    """
+    Calculates the average daily diversity of webpages for each user.
+    
+    For every day a user is active, the number of unique webpages is computed.
+    Then, for each user, the average diversity is taken over all active days,
+    rounded up to the nearest integer and clipped at a maximum of 5.
+    
+    This is a user-based, non-categorical feature.
+    """
+    ddf = df.copy()
+    ddf["session_date"] = ddf["DateTime"].dt.date
+    # Calculate daily webpage diversity for each user.
+    daily_diversity = ddf.groupby(["user_id", "session_date"])["webpage_id"].nunique()
+    # Compute the average daily diversity per user.
+    avg_diversity = daily_diversity.groupby("user_id").mean()
+    # Round up and clip at 5.
+    avg_diversity_ceiled = np.ceil(avg_diversity).clip(upper=5)
+    # Map the computed value back to each user.
+    result = ddf["user_id"].map(avg_diversity_ceiled)
+    result.name = "user_webpage_diversity"
+    return result.astype(int)
+
+# -----------------------------------------------------------------------------
+# New Engineered User-level Feature
+# -----------------------------------------------------------------------------
+def same_timestamp_session_count_func(df: pd.DataFrame) -> pd.Series:
+    """
+    For each row, counts the number of sessions (rows) that have the same user_id and the same DateTime.
+    The count is clipped at a maximum of 6.
+    
+    This non-categorical feature is user-based.
+    """
+    # Count the number of rows per (user_id, DateTime) group.
+    count_series = df.groupby(["user_id", "DateTime"])["DateTime"].transform("size")
+    # Clip the count at an upper bound of 6.
+    count_series = count_series.clip(upper=6)
+    count_series.name = "same_timestamp_session_count"
+    return count_series.astype(int)
+
+# -----------------------------------------------------------------------------
+# New User-based Feature
+# -----------------------------------------------------------------------------
+def max_daily_user_activity_spread_func(df: pd.DataFrame) -> pd.Series:
+    """
+    For each user, computes the maximum number of distinct hours during which the user was active in any single day.
+    
+    Process:
+      1. Extract the session date and the hour (0-23) from DateTime.
+      2. For each user and day, count the number of unique hours in which the user was active.
+      3. For each user, return the maximum count over all days.
+    
+    This non-categorical user-based feature reflects the daily spread of user activity.
+    """
+    ddf = df.copy()
+    ddf["session_date"] = ddf["DateTime"].dt.date
+    ddf["active_hour"] = ddf["DateTime"].dt.hour  # values in 0-23.
+    # Count unique active hours per user per day.
+    daily_activity_spread = ddf.groupby(["user_id", "session_date"])["active_hour"].nunique()
+    # For each user, take the maximum spread over all days.
+    max_spread = daily_activity_spread.groupby("user_id").max()
+    # Map the computed value back to the original DataFrame based on user_id.
+    result = df["user_id"].map(max_spread)
+    result.name = "max_daily_user_activity_spread"
+    return result.fillna(0).astype(int)
+
+def max_same_timestamp_session_count_func(df: pd.DataFrame) -> pd.Series:
+    """
+    For each user, computes the maximum number of sessions that share the exact same timestamp.
+    
+    Process:
+      1. Group the DataFrame by ['user_id', 'DateTime'] and count the number of sessions in each group.
+      2. For each user, take the maximum count over all such groups.
+      3. Clip this maximum at an upper bound of 6.
+      
+    Returns a non-categorical user-based feature as a Series named "max_same_timestamp_session_count".
+    """
+    # Group by user_id and DateTime and count the sessions.
+    group_counts = df.groupby(["user_id", "DateTime"]).size()
+    # For each user, compute the maximum count among all timestamps.
+    max_counts = group_counts.groupby("user_id").max()
+    # Clip the maximum value at 6.
+    max_counts = max_counts.clip(upper=6)
+    # Map the computed value back to every row by user_id.
+    result = df["user_id"].map(max_counts)
+    result.name = "max_same_timestamp_session_count"
+    return result.fillna(0).astype(int)
+
+def many_identical_sessions_func(df: pd.DataFrame) -> pd.Series:
+    """
+    For each user, calculates the maximum number of sessions that are identical in terms of product, campaign_id, and webpage_id.
+    
+    Process:
+      1. Group the DataFrame by ['user_id', 'product', 'campaign_id', 'webpage_id'] and count the sessions in each group.
+      2. For each user, take the maximum count among all groups (i.e., the largest N such that the user had N identical sessions).
+      3. Clip this maximum at an upper bound of 6.
+      
+    Returns a non-categorical user-based feature named "many_identical_sessions".
+    """
+    group_counts = df.groupby(["user_id", "product", "campaign_id", "webpage_id"]).size()
+    max_counts = group_counts.groupby("user_id").max()
+    max_counts = max_counts.clip(upper=6)
+    result = df["user_id"].map(max_counts)
+    result.name = "many_identical_sessions"
+    return result.fillna(0).astype(int)
+
+def mixed_city_development_index_known_func(df: pd.DataFrame) -> pd.Series:
+    """
+    For each user, determines if the 'city_development_index_known' field
+    has both True and False values across sessions.
+    
+    Returns 1 if the user has at least one session with city_development_index_known=True 
+    and at least one session with city_development_index_known=False.
+    Otherwise, returns 0.
+    
+    This is a binary, non-categorical user-level feature.
+    """
+    groups = df.groupby("user_id")["city_development_index_known"].apply(lambda s: set(s.dropna()))
+    mixed = groups.apply(lambda x: 1 if (True in x and False in x) else 0)
+    result = df["user_id"].map(mixed)
+    result.name = "mixed_city_development_index_known"
+    return result.astype(int)
+
+def mixed_product_category_2_known_func(df: pd.DataFrame) -> pd.Series:
+    """
+    For each user, determines if the 'product_category_2_known' field
+    has both True and False values across sessions.
+    
+    Returns 1 if the user has at least one session with product_category_2_known=True 
+    and at least one session with product_category_2_known=False.
+    Otherwise, returns 0.
+    
+    This is a binary, non-categorical user-level feature.
+    """
+    groups = df.groupby("user_id")["secondary_product_category_known"].apply(lambda s: set(s.dropna()))
+    mixed = groups.apply(lambda x: 1 if (True in x and False in x) else 0)
+    result = df["user_id"].map(mixed)
+    result.name = "mixed_product_category_2_known"
+    return result.astype(int)
+
+# -----------------------------------------------------------------------------
+# New Session-based Feature
+# -----------------------------------------------------------------------------
+def session_mixed_secondary_product_category_known_func(df: pd.DataFrame) -> pd.Series:
+    """
+    For each session, checks if there exists another session with the same user_id and DateTime
+    where the value of 'secondary_product_category_known' is different.
+    
+    Returns 1 if the group of sessions (sharing the same timestamp) has at least 2 unique values 
+    for 'secondary_product_category_known'; otherwise, returns 0.
+    
+    This is a binary, non-categorical, session-based feature.
+    """
+    series = df.groupby(["user_id", "DateTime"])["secondary_product_category_known"]\
+               .transform(lambda x: int(x.nunique() > 1))
+    series.name = "session_mixed_secondary_product_category_known"
+    return series.astype(int)
+
+def session_mixed_city_development_index_known_func(df: pd.DataFrame) -> pd.Series:
+    """
+    For each session, checks if there exists another session with the same user_id and DateTime
+    where the value of 'city_development_index_known' is different.
+    
+    Returns 1 if the group of sessions (sharing the same timestamp) has at least 2 unique values 
+    for 'city_development_index_known'; otherwise, returns 0.
+    
+    This is a binary, non-categorical, session-based feature.
+    """
+    series = df.groupby(["user_id", "DateTime"])["city_development_index_known"]\
+               .transform(lambda x: int(x.nunique() > 1))
+    series.name = "session_mixed_city_development_index_known"
+    return series.astype(int)
 
 # -----------------------------------------------------------------------------
 # Definition of the final feature list including function pointers.
@@ -277,95 +442,114 @@ FEATURES_LIST = [
     {"name": "user_group_id", "scope": "user", "categorical": False, "func": make_original_feature_func("user_group_id")},
     {"name": "gender", "scope": "user", "categorical": True, "func": make_original_feature_func("gender")},
     {"name": "var_1", "scope": "session", "categorical": False, "func": make_original_feature_func("var_1")},
-    {"name": "user_depth", "scope": "user", "categorical": False, "func": make_original_feature_func("user_depth")},
+    {"name": "user_depth", "scope": "user", "categorical": True, "func": make_original_feature_func("user_depth")},
     {"name": "age_level", "scope": "user", "categorical": False, "func": make_original_feature_func("age_level")},
+    {"name": "secondary_product_category_known", "scope": "session", "categorical": False, "func": make_original_feature_func("secondary_product_category_known")},
+    {"name": "city_development_index_known", "scope": "session", "categorical": False, "func": make_original_feature_func("city_development_index_known")},
 
-    # --- Engineered Session-level Features (S1–S13) ---
-    {"name": "daily_sessions_count", "scope": "session", "categorical": False, "func": daily_sessions_count_func},           # S1
-    {"name": "has_viewed_product_before", "scope": "session", "categorical": False, "func": has_viewed_product_before_func},    # S2
-    {"name": "has_viewed_category_before", "scope": "session", "categorical": False, "func": has_viewed_category_before_func},  # S3
-    {"name": "has_viewed_campaign_before", "scope": "session", "categorical": False, "func": has_viewed_campaign_before_func},  # S4
-    {"name": "daily_webpage_count", "scope": "session", "categorical": False, "func": daily_webpage_count_func},              # S5
-    {"name": "prev_session_same_product", "scope": "session", "categorical": False, "func": prev_session_same_product_func},    # S6
-    {"name": "session_time_of_day", "scope": "session", "categorical": True,  "func": session_time_of_day_func},               # S7
-    {"name": "session_day_of_week", "scope": "session", "categorical": True,  "func": session_day_of_week_func},               # S8
-    {"name": "next_day_session_indicator", "scope": "session", "categorical": False, "func": next_day_session_indicator_func},# S9
-    {"name": "daily_session_sequence", "scope": "session", "categorical": False, "func": daily_session_sequence_func},       # S10
-    {"name": "duplicate_timestamp_session_count", "scope": "session", "categorical": False, "func": duplicate_timestamp_session_count_func},  # S11
-    {"name": "product_diversity_same_timestamp", "scope": "session", "categorical": False, "func": product_diversity_same_timestamp_func}, # S12
-    {"name": "webpage_diversity_same_timestamp", "scope": "session", "categorical": False, "func": webpage_diversity_same_timestamp_func}, # S13
+    # --- Engineered Session-level Features ---
+    {"name": "daily_sessions_count", "scope": "session", "categorical": False, "func": daily_sessions_count_func},
+    {"name": "has_viewed_category_before", "scope": "session", "categorical": False, "func": has_viewed_category_before_func},
+    {"name": "has_viewed_campaign_before", "scope": "session", "categorical": False, "func": has_viewed_campaign_before_func},
+    {"name": "daily_webpage_count", "scope": "session", "categorical": False, "func": daily_webpage_count_func},
+    {"name": "prev_session_same_product", "scope": "session", "categorical": False, "func": prev_session_same_product_func},
+    {"name": "session_time_of_day", "scope": "session", "categorical": True, "func": session_time_of_day_func},
+    {"name": "duplicate_timestamp_session_count", "scope": "session", "categorical": False, "func": duplicate_timestamp_session_count_func},
+    {"name": "product_diversity_same_timestamp", "scope": "session", "categorical": False, "func": product_diversity_same_timestamp_func},
+    {"name": "webpage_diversity_same_timestamp", "scope": "session", "categorical": False, "func": webpage_diversity_same_timestamp_func},
+    {"name": "session_mixed_secondary_product_category_known", "scope": "session", "categorical": False, "func": session_mixed_secondary_product_category_known_func},
+    {"name": "session_mixed_city_development_index_known", "scope": "session", "categorical": False, "func": session_mixed_city_development_index_known_func},
 
-    # --- Engineered User-level Features (U1–U9c) ---
-    {"name": "total_sessions_count", "scope": "user", "categorical": False, "func": total_sessions_count_func},             # U1
-    {"name": "is_high_volume_user", "scope": "user", "categorical": False, "func": is_high_volume_user_func},                # U2
-    {"name": "distinct_products_count", "scope": "user", "categorical": False, "func": distinct_products_count_func},         # U3a
-    {"name": "distinct_categories_count", "scope": "user", "categorical": False, "func": distinct_categories_count_func},     # U3b
-    {"name": "distinct_campaigns_count", "scope": "user", "categorical": False, "func": distinct_campaigns_count_func},       # U3c
-    {"name": "distinct_webpages_count", "scope": "user", "categorical": False, "func": distinct_webpages_count_func},         # U3d
-    {"name": "most_common_category", "scope": "user", "categorical": True,  "func": most_common_category_func},               # U4a
-    {"name": "most_common_campaign", "scope": "user", "categorical": True,  "func": most_common_campaign_func},               # U4b
-    {"name": "most_common_time_of_day", "scope": "user", "categorical": True,  "func": most_common_time_of_day_func},            # U4c
-    {"name": "total_active_days", "scope": "user", "categorical": False, "func": total_active_days_func},                     # U5
-    {"name": "sessions_with_min_gap_count", "scope": "user", "categorical": False, "func": sessions_with_min_gap_count_func},   # U6
-    {"name": "excess_duplicate_timestamps", "scope": "user", "categorical": False, "func": excess_duplicate_timestamps_func},  # U7
-    {"name": "early_morning_sessions_count", "scope": "user", "categorical": False, "func": early_morning_sessions_count_func},        # U8
-    {"name": "user_product_diversity", "scope": "user", "categorical": False, "func": user_product_diversity_func},             # U9a
-    {"name": "user_campaign_diversity", "scope": "user", "categorical": False, "func": user_campaign_diversity_func},           # U9b
-    {"name": "user_webpage_diversity", "scope": "user", "categorical": False, "func": user_webpage_diversity_func},             # U9c
+    # --- Engineered User-level Features ---
+    {"name": "is_high_volume_user", "scope": "user", "categorical": False, "func": is_high_volume_user_func},
+    {"name": "distinct_products_count", "scope": "user", "categorical": False, "func": distinct_products_count_func},
+    {"name": "distinct_categories_count", "scope": "user", "categorical": False, "func": distinct_categories_count_func},
+    {"name": "distinct_campaigns_count", "scope": "user", "categorical": False, "func": distinct_campaigns_count_func},
+    {"name": "distinct_webpages_count", "scope": "user", "categorical": False, "func": distinct_webpages_count_func},
+    {"name": "most_common_time_of_day", "scope": "user", "categorical": True, "func": most_common_time_of_day_func},
+    {"name": "total_active_days", "scope": "user", "categorical": False, "func": total_active_days_func},
+    {"name": "sessions_with_min_gap_count", "scope": "user", "categorical": False, "func": sessions_with_min_gap_count_func},
+    {"name": "excess_duplicate_timestamps", "scope": "user", "categorical": False, "func": excess_duplicate_timestamps_func},
+    {"name": "early_morning_sessions_count", "scope": "user", "categorical": False, "func": early_morning_sessions_count_func},
+    {"name": "user_product_diversity", "scope": "user", "categorical": False, "func": user_product_diversity_func},
+    {"name": "user_campaign_diversity", "scope": "user", "categorical": False, "func": user_campaign_diversity_func},
+    {"name": "user_webpage_diversity", "scope": "user", "categorical": False, "func": user_webpage_diversity_func},
+    {"name": "same_timestamp_session_count", "scope": "user", "categorical": False, "func": same_timestamp_session_count_func},
+    {"name": "max_daily_user_activity_spread", "scope": "user", "categorical": False, "func": max_daily_user_activity_spread_func},
+    {"name": "max_same_timestamp_session_count", "scope": "user", "categorical": False, "func": max_same_timestamp_session_count_func},
+    {"name": "many_identical_sessions", "scope": "user", "categorical": False, "func": many_identical_sessions_func},
+    {"name": "mixed_city_development_index_known", "scope": "user", "categorical": False, "func": mixed_city_development_index_known_func},
+    {"name": "mixed_product_category_2_known", "scope": "user", "categorical": False, "func": mixed_product_category_2_known_func},
 ]
 
-# -----------------------------------------------------------------------------
-# Final function: prepare_features()
-# -----------------------------------------------------------------------------
-def prepare_features(df: pd.DataFrame, verbose: bool = False) -> pd.DataFrame:
+def cast_features(df_final: pd.DataFrame, features: List[Feature]) -> pd.DataFrame:
+    """
+    Casts the columns in df_final based on the dtype specified in each Feature instance.
+    For categorical features, it converts to Pandas' string dtype; for others, to int.
+    """
+    for feature in features:
+        col = feature.name
+        if col in df_final.columns:
+            df_final[col] = df_final[col].astype(feature.dtype)
+    return df_final
+
+def prepare_features(df: pd.DataFrame, verbose: bool = False) -> tuple:
     """
     Given a DataFrame with all necessary columns, compute and return a new DataFrame 
-    that contains exactly the final features (ordered as in FEATURES_LIST) while preserving 
-    the original DataFrame's index.
-
-    - For each feature in FEATURES_LIST, the corresponding function (under the "func" key) 
-      is used to compute the feature.
-    - Categorical features are cast to the Pandas string dtype ("string") and non-categorical 
-      features to int.
-    - If the target column ("is_click") is present, it is added (cast to int).
-    """
-    TARGET_COLUMN = "is_click"
+    that contains exactly the final features (ordered as in FEATURES_LIST) with their correct dtypes,
+    while preserving the original DataFrame's index.
     
+    Also returns a list of Feature instances describing each feature added.
+    (This list helps the data transformer know which features are categorical for downstream tasks.)
+    
+    Processing:
+      - Renames columns if necessary.
+      - Parses DateTime.
+      - Computes each feature using its corresponding function.
+      - Maps the computed features to a new DataFrame with the correct index.
+      - Creates Feature instances from the definition list.
+      - Casts each feature column using the dtype declared by its Feature.
+      - Adds the target column (cast to int) if present.
+    """
+    TARGET_COLUMN = cons.TARGET_COLUMN
+
     # Rename product_category_1 if necessary.
     if "product_category_1" in df.columns and "product_category" not in df.columns:
         df = df.rename(columns={"product_category_1": "product_category"})
-    
-    # Ensure DateTime is parsed as a datetime.
+
+    # Ensure DateTime is parsed.
     df["DateTime"] = pd.to_datetime(df["DateTime"], errors="coerce")
-    
-    # Create an empty DataFrame with the same index as the original.
+
+    # Create an empty DataFrame with the same index.
     df_final = pd.DataFrame(index=df.index)
-    
-    # Compute each feature using its function pointer from FEATURES_LIST.
+
+    # Process each feature as specified in FEATURES_LIST.
     for feat in FEATURES_LIST:
         feature_name = feat["name"]
         series = feat["func"](df)
-        # Reindex to ensure alignment with original DataFrame
+        # Reindex to ensure alignment.
         series = series.reindex(df.index)
         df_final[feature_name] = series
 
     # Add the target column if available.
     if TARGET_COLUMN in df.columns:
         df_final[TARGET_COLUMN] = df[TARGET_COLUMN].reindex(df.index)
-    
-    # Enforce data types: categorical features to Pandas string dtype and non-categorical features to int.
-    for feat in FEATURES_LIST:
-        col = feat["name"]
-        if col in df_final.columns:
-            if feat["categorical"]:
-                df_final[col] = df_final[col].astype("string[python]")
-            else:
-                df_final[col] = df_final[col].astype(int)
-    
+
+    # Create Feature instances.
+    features_added = [
+        Feature(name=feat["name"], scope=feat["scope"], categorical=feat["categorical"])
+        for feat in FEATURES_LIST
+    ]
+
+    # Modular casting: uniformly cast features based on each Feature's dtype.
+    df_final = cast_features(df_final, features_added)
+
+    # Ensure the target column is cast to int.
     if TARGET_COLUMN in df_final.columns:
         df_final[TARGET_COLUMN] = df_final[TARGET_COLUMN].astype(int)
-    
+
     if verbose:
-        print(f"Feature engineering completed")
-        print(f"Returning final DataFrame with {len(df_final.columns)} columns and original index preserved.")
-    return df_final
+        print("[feature_engineering.py] Feature engineering completed")
+        print(f"[feature_engineering.py] Final DataFrame has {len(df_final.columns)} columns with original index preserved.")
+
+    return df_final, features_added
