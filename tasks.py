@@ -49,12 +49,12 @@ def pipeline(
     )
     
     # c.run(
-    #     f"python train.py --optuna-search "
-    #     f"--input-path={experiment.preprocess_path} "
-    #     f"--n-trials={n_trials} "
-    #     f"--output-path={experiment.train_path} "
-    #     f"{'--gpu' if gpu else ''}"
-    #     )
+    #      f"python train.py --optuna-search "
+    #      f"--input-path={experiment.preprocess_path} "
+    #      f"--n-trials={n_trials} "
+    #      f"--output-path={experiment.train_path} "
+    #      f"{'--gpu' if gpu else ''}"
+    #      )
 
 
     
@@ -62,7 +62,8 @@ def pipeline(
         "python train.py "
         "--use-default-model "
         f"--input-path={experiment.preprocess_path} "
-        f"--output-path={experiment.train_path} ",
+        f"--output-path={experiment.train_path} "
+        "--verbose",
         hide=False,
         pty=pty_arg
     )
@@ -165,7 +166,7 @@ def inference_pipeline(c, run_id, csv_for_prediction=DEFAULT_CSV_FOR_PREDICTION)
 
     c.run(
         f"python predict.py "
-        f"--model-path={experiment.model_path} "
+        f"--model-path={experiment.full_model_path} "
         f"--test-features-path={experiment.external_test_features_path} "
         f"--test-dtypes-path={experiment.external_test_dtypes_path} "
         f"--output-path={experiment.predict_path} "

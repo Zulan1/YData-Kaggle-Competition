@@ -8,6 +8,7 @@ import lightgbm as lgb
 import catboost as cb
 import pandas as pd
 import constants as cons
+import json
 
 import pandas as pd
 import config as conf
@@ -17,7 +18,7 @@ from sklearn.tree import DecisionTreeClassifier
 
 
 from app.metrics import compute_score
-from app.file_manager import get_val_set, get_train_set, get_transformer
+from app.file_manager import get_val_set, get_train_set, load_full_processed_training, save_full_model
 from app.file_manager import save_model
 from app.argparser import get_train_args
 from app.helper_functions import split_dataset_Xy
@@ -38,6 +39,7 @@ def get_model(args, X_train, y_train, X_val, y_val):
 
     if args.optuna_search:
         best_params = hyperparameter_search(X_train, y_train, X_val, y_val, args)
+        
         model_type = best_params['model_type']
         del best_params['model_type']
         model = models[model_type]
@@ -155,16 +157,24 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
                     'learning_rate': trial.suggest_float('learning_rate', 0.001, 0.3, log=True),
                     'depth': trial.suggest_int('depth', 3, 10),
                     'l2_leaf_reg': trial.suggest_float('l2_leaf_reg', 0, 10),
+                    'min_data_in_leaf': trial.suggest_int('min_data_in_leaf', 1, 100),
+                    'leaf_estimation_method': trial.suggest_categorical('leaf_estimation_method', ['Newton', 'Gradient']),
+                    'leaf_estimation_iterations': trial.suggest_int('leaf_estimation_iterations', 1, 10),
+                    'grow_policy': trial.suggest_categorical('grow_policy', ['SymmetricTree', 'Depthwise', 'Lossguide']),
+                    'max_ctr_complexity': trial.suggest_int('max_ctr_complexity', 1, 10),
+                    'border_count': trial.suggest_int('border_count', 1, 255),
+                    'od_type': trial.suggest_categorical('od_type', ['IncToDec', 'Iter']),
+                    'od_wait': trial.suggest_int('od_wait', 10, 100),
                     'task_type': 'GPU' if args.gpu else 'CPU',
                     'verbose': 500,
-                    'cat_features': conf.CAT_FEATURES,
-                    'valid_sets': [(X_val, y_val)],
                     'random_strength': trial.suggest_float('random_strength', 0.0, 10.0),
                     'bagging_temperature': trial.suggest_float('bagging_temperature', 0.0, 1.0),
-                    }
-                auto_class_weights = trial.suggest_categorical('auto_class_weights', ['Balanced', None]),
-                if auto_class_weights == 'Balanced':
-                    hparams['auto_class_weights'] = 'Balanced'
+                }
+                hparams['auto_class_weights'] = 'Balanced'
+                hparams['cat_features'] = conf.CAT_FEATURES
+                hparams['valid_sets'] = [(X_val, y_val)]
+                hparams['allow_writing_files'] = False
+                hparams['random_seed'] = 42
                 model = cb.CatBoostClassifier()
             case _:
                 raise ValueError('Invalid model type')
@@ -186,34 +196,130 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
     study.optimize(objective, n_trials=args.n_trials, callbacks=[log_score])
     best_trial = max(study.best_trials, key=lambda t: t.values[0])
     print(f"Finished {args.n_trials} found best params: {best_trial.params}, with score: {best_trial.values[0]}.")
+
+    # Log to Weights & Biases (if needed)
+  #  wandb.log({"best_hyperparameters": best_trial.params})
+
     return best_trial.params
 
 def main():
+    # Parse training arguments
     args = get_train_args()
-    
-    input_path = args.input_path
 
-    df_train = get_train_set(input_path)
-    df_val = get_val_set(input_path)
+    # Load training and validation data
+    df_train = get_train_set(args.input_path)
+    df_val = get_val_set(args.input_path)
     X_train, y_train = split_dataset_Xy(df_train)
     X_val, y_val = split_dataset_Xy(df_val)
+    if args.verbose:
+        print(f"[train.py] Training set loaded. Shape: {X_train.shape}, {y_train.shape}")
+        print(f"[train.py] Validation set loaded. Shape: {X_val.shape}, {y_val.shape}")
 
-    wandb.init(
-        project='ydata-kaggle-competition',
-        config=args,
-        )
+    # Initialize WandB for tracking
+    wandb.init(project='ydata-kaggle-competition', config=vars(args))
     
+    if args.use_default_model:
+        if args.verbose:
+            print(f"[train.py] Using default CatBoost model hyperparameters")
+        # Use default CatBoost hyperparameters from the configuration.
+        model_params = conf.DEFAULT_MODEL_PARAMS.copy()  # default dictionary from config
+        # Override/add fixed parameters to avoid CatBoost writing files
+        model_params.update({
+            "cat_features": conf.CAT_FEATURES,
+            "task_type": "GPU" if args.gpu else "CPU",
+            "verbose": False,
+            "snapshot_interval": 0,         # disables snapshot file creation
+            "allow_writing_files": False,   # no extra file writing
+            "random_seed": 42,
+        })
+        model = cb.CatBoostClassifier(**model_params)
 
-    model = get_model(args, X_train, y_train, X_val, y_val)
-    model.fit(X_train, y_train)
+    else:
+        if args.verbose:
+            print(f"[train.py] Optimizing CatBoost hyperparameters using Optuna")
+        # Optimize CatBoost hyperparameters using Optuna
+
+        def objective(trial):
+            hparams = {
+                "iterations": trial.suggest_int("iterations", 100, 5000, log=True),
+                "learning_rate": trial.suggest_float("learning_rate", 0.001, 0.3, log=True),
+                "depth": trial.suggest_int("depth", 3, 10),
+                "l2_leaf_reg": trial.suggest_float("l2_leaf_reg", 0, 10),
+                "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 1, 100),
+                "leaf_estimation_method": trial.suggest_categorical("leaf_estimation_method", ["Newton", "Gradient"]),
+                "leaf_estimation_iterations": trial.suggest_int("leaf_estimation_iterations", 1, 10),
+                "grow_policy": trial.suggest_categorical("grow_policy", ["SymmetricTree", "Depthwise", "Lossguide"]),
+                "max_ctr_complexity": trial.suggest_int("max_ctr_complexity", 1, 10),
+                "border_count": trial.suggest_int("border_count", 1, 255),
+                "od_type": trial.suggest_categorical("od_type", ["IncToDec", "Iter"]),
+                "od_wait": trial.suggest_int("od_wait", 10, 100),
+                "random_strength": trial.suggest_float("random_strength", 0.0, 10.0),
+                "bagging_temperature": trial.suggest_float("bagging_temperature", 0.0, 1.0),
+            }
+            # Add fixed parameters
+            hparams.update({
+                "cat_features": conf.CAT_FEATURES,
+                "task_type": "GPU" if args.gpu else "CPU",
+                "verbose": False,
+                "snapshot_interval": 0,
+                "allow_writing_files": False,
+                "random_seed": 42,
+                "auto_class_weights": "Balanced"
+            })
+            model = cb.CatBoostClassifier(**hparams)
+            model.fit(X_train, y_train, eval_set=(X_val, y_val), verbose=False)
+            predictions = model.predict(X_val)
+            y_proba = model.predict_proba(X_val)[:, 1]
+            score = compute_score(args.scoring_method, y_val, predictions, y_proba)
+            return score
+
+        study = optuna.create_study(direction="maximize")
+        study.optimize(objective, n_trials=args.n_trials)
+        best_params = study.best_trial.params
+        # Add fixed parameters that should not be optimized
+        best_params.update({
+            "cat_features": conf.CAT_FEATURES,
+            "task_type": "GPU" if args.gpu else "CPU",
+            "verbose": False,
+            "snapshot_interval": 0,
+            "allow_writing_files": False,
+            "random_seed": 42,
+        })
+        model = cb.CatBoostClassifier(**best_params)
+
+    # Train the final model on training data
+    model.fit(X_train, y_train, eval_set=(X_val, y_val), verbose=False)
+    if args.verbose:
+        print(f"[train.py] Training completed. Model saved to {args.output_path}.")
+    print(f"[train.py] Predicting on validation set")
     predictions = model.predict(X_val)
     y_proba = model.predict_proba(X_val)[:, 1]
     score = compute_score(args.scoring_method, y_val, predictions, y_proba)
-    print(confusion_matrix(y_val, predictions))
+    print("Final Score on Validation Set: ", score)
+    if args.verbose:
+        print(f"[train.py] Predicting on training set")
+        predictions = model.predict(X_train)
+        y_proba = model.predict_proba(X_train)[:, 1]
+    score = compute_score(args.scoring_method, y_train, predictions, y_proba)
+    print("Final Score on Training Set: ", score)
+
+
+    
+    # Log score and save the model
     wandb.log({args.scoring_method: score})
-    print(f"Final score: {score}")
     save_model(model, args.output_path)
 
+    if args.verbose:
+        print(f"[train.py] Model saved to {args.output_path}.")
+    
+    print(f"[train.py] Training model on full training set for future inference")
 
-if __name__ == '__main__':
+    df_full = load_full_processed_training(args.input_path)
+    X_full, y_full = split_dataset_Xy(df_full)
+    model.fit(X_full, y_full)
+    save_full_model(model, args.output_path)
+    if args.verbose:
+        print(f"[train.py] Full model saved to {args.output_path}.")
+
+if __name__ == "__main__":
     main()

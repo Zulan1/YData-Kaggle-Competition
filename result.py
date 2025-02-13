@@ -19,20 +19,6 @@ def main():
     print(f"\nScores:")
     print(f"F1 Score: {f1_value:.4f}")
     print(f"AUC Score: {auc_value:.4f}")
-    if hasattr(model, 'feature_importances_'):
-        importances = model.feature_importances_
-        # Match importance scores with feature names from the features DataFrame.
-        if len(importances) == len(features.columns):
-            feature_names = features.columns
-        else:
-            feature_names = [f'feature_{i}' for i in range(len(importances))]
-        fi_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances})
-        fi_df = fi_df.sort_values(by='Importance', ascending=False)
-        print("\nFeature Importances:")
-        for _, row in fi_df.iterrows():
-            print(f"{row['Feature']}: {row['Importance']:.4f}")
-    else:
-        print("\nModel does not have a feature_importances_ attribute.")
 
 if __name__ == '__main__':
     main()

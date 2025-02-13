@@ -48,8 +48,12 @@ def main():
     args = get_predict_args()
     model = get_model(args.model_path, args.verbose)
     df = get_test_features(args.test_features_path, args.test_dtypes_path)
-    
+
     if args.verbose:
+        print(f"\n[predict.py] Loading model from {args.model_path}...")
+        print(f"[predict.py] Loading test features from {args.test_features_path}...")
+        print(f"[predict.py] Loading test dtypes from {args.test_dtypes_path}...")
+        print(f"[predict.py] Features shape: {df.shape}")
         print(f"\n[predict.py] Predicting {cons.TARGET_COLUMN}...")
 
     predictions = get_predictions(model, df)

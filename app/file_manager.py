@@ -61,6 +61,24 @@ def get_train_set(input_path: str) -> pd.DataFrame:
         df_train[col] = df_train[col].astype(dtype)
     return df_train
 
+def save_full_processed_training(df: pd.DataFrame, output_path: str) -> None:
+    """Save full processed training data to a CSV file."""
+    df.to_csv(os.path.join(output_path, cons.DEFAULT_FULL_PROCESSED_TRAINING_FILE), index=False)
+    dtypes_dict = df.dtypes.astype(str).to_dict()
+    with open(os.path.join(output_path, cons.DEFAULT_FULL_PROCESSED_TRAINING_DTYPES_FILE), 'wb') as f:
+        pickle.dump(dtypes_dict, f)
+    return
+
+def load_full_processed_training(input_path: str) -> pd.DataFrame:
+    """Load full processed training data from a CSV file."""
+    df_full = pd.read_csv(os.path.join(input_path, cons.DEFAULT_FULL_PROCESSED_TRAINING_FILE))
+    df_full = df_full.copy()
+    with open(os.path.join(input_path, cons.DEFAULT_FULL_PROCESSED_TRAINING_DTYPES_FILE), 'rb') as f:
+        dtypes_dict = pickle.load(f)
+    for col, dtype in dtypes_dict.items():
+        df_full[col] = df_full[col].astype(dtype)
+    return df_full
+
 def get_test_features(test_features_path: str, test_dtypes_path: str) -> pd.DataFrame:
     """Get test features from a CSV file."""
     
@@ -74,6 +92,12 @@ def get_test_features(test_features_path: str, test_dtypes_path: str) -> pd.Data
         df_test[col] = df_test[col].astype(dtype)
 
     return df_test
+
+def save_full_model(model, output_path):
+    model_path = os.path.join(output_path, cons.DEFAULT_FULL_MODEL_FILE)
+    with open(model_path, 'wb') as f:
+        pickle.dump(model, f)
+    return
 
 def save_predictions(df, output_path, verbose):
     predictions_path = os.path.join(output_path, cons.DEFAULT_PREDICTIONS_FILE)

@@ -430,6 +430,38 @@ def session_mixed_city_development_index_known_func(df: pd.DataFrame) -> pd.Seri
     series.name = "session_mixed_city_development_index_known"
     return series.astype(int)
 
+def session_mixed_var1_func(df: pd.DataFrame) -> pd.Series:
+    """
+    For each session, checks if there is another session with the same user_id and DateTime 
+    that has a different value of 'var1'.
+    
+    Returns:
+        A binary (0/1) Pandas Series. 1 indicates that, within the group of sessions 
+        (sharing the same user_id and DateTime), there exists at least one session with a var1 value 
+        different from the others; 0 indicates that all sessions in the group have the same var1 value.
+        
+    This is a non-categorical, session-based feature.
+    """
+    series = df.groupby(["user_id", "DateTime"])["var_1"].transform(lambda x: int(x.nunique() > 1))
+    series.name = "session_mixed_var1"
+    return series.astype(int)
+
+def user_uniform_var1_func(df: pd.DataFrame) -> pd.Series:
+    """
+    For each user, tests whether the 'var1' values are uniform across all sessions.
+    
+    Process:
+      1. Group the DataFrame by 'user_id' and count the number of unique 'var1' values.
+      2. If a user has only one unique 'var1' value (i.e., uniform), mark as 1; otherwise, mark as 0.
+    
+    Returns:
+        A non-categorical (0/1) user-based feature as a Pandas Series named "user_uniform_var1".
+    """
+    uniform = df.groupby("user_id")["var_1"].nunique().apply(lambda x: 1 if x == 1 else 0)
+    result = df["user_id"].map(uniform)
+    result.name = "user_uniform_var1"
+    return result.astype(int)
+
 # -----------------------------------------------------------------------------
 # Definition of the final feature list including function pointers.
 # -----------------------------------------------------------------------------
@@ -446,7 +478,7 @@ FEATURES_LIST = [
     {"name": "age_level", "scope": "user", "categorical": False, "func": make_original_feature_func("age_level")},
     {"name": "secondary_product_category_known", "scope": "session", "categorical": False, "func": make_original_feature_func("secondary_product_category_known")},
     {"name": "city_development_index_known", "scope": "session", "categorical": False, "func": make_original_feature_func("city_development_index_known")},
-
+    
     # --- Engineered Session-level Features ---
     {"name": "daily_sessions_count", "scope": "session", "categorical": False, "func": daily_sessions_count_func},
     {"name": "has_viewed_category_before", "scope": "session", "categorical": False, "func": has_viewed_category_before_func},
@@ -459,7 +491,8 @@ FEATURES_LIST = [
     {"name": "webpage_diversity_same_timestamp", "scope": "session", "categorical": False, "func": webpage_diversity_same_timestamp_func},
     {"name": "session_mixed_secondary_product_category_known", "scope": "session", "categorical": False, "func": session_mixed_secondary_product_category_known_func},
     {"name": "session_mixed_city_development_index_known", "scope": "session", "categorical": False, "func": session_mixed_city_development_index_known_func},
-
+    {"name": "session_mixed_var1", "scope": "session", "categorical": False, "func": session_mixed_var1_func},
+    
     # --- Engineered User-level Features ---
     {"name": "is_high_volume_user", "scope": "user", "categorical": False, "func": is_high_volume_user_func},
     {"name": "distinct_products_count", "scope": "user", "categorical": False, "func": distinct_products_count_func},
@@ -480,6 +513,7 @@ FEATURES_LIST = [
     {"name": "many_identical_sessions", "scope": "user", "categorical": False, "func": many_identical_sessions_func},
     {"name": "mixed_city_development_index_known", "scope": "user", "categorical": False, "func": mixed_city_development_index_known_func},
     {"name": "mixed_product_category_2_known", "scope": "user", "categorical": False, "func": mixed_product_category_2_known_func},
+    {"name": "user_uniform_var1", "scope": "user", "categorical": False, "func": user_uniform_var1_func},
 ]
 
 def cast_features(df_final: pd.DataFrame, features: List[Feature]) -> pd.DataFrame:
