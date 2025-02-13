@@ -1,5 +1,6 @@
 import optuna
 import pickle
+import training_constants
 import os
 import wandb
 import xgboost as xgb
@@ -11,7 +12,6 @@ import constants as cons
 import pandas as pd
 import config as conf
 
-from sklearn.dummy import DummyClassifier
 from sklearn.metrics import confusion_matrix
 from sklearn.tree import DecisionTreeClassifier
 
@@ -109,7 +109,7 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
         wandb.log(log_msg)
 
     def objective(trial):
-        model_types = ['XGBoost', 'LightGBM', 'CatBoost'] if args.model_type is None else [args.model_type]
+        model_types = training_constants.MODELS if args.model_type is None else [args.model_type]
         model_type = trial.suggest_categorical('model_type', model_types)
         match model_type:
             case 'DecisionTree':
@@ -130,7 +130,7 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
                     'gamma': trial.suggest_float('gamma', 0, 0.5),
                     'reg_lambda': trial.suggest_float('reg_lambda', 0, 2),
                     'scale_pos_weight': trial.suggest_categorical('scale_pos_weight', [class_ratio, 1]),
-                    'device': 'cuda' if args.gpu else 'cpu'
+                    'device': 'cuda' if args.gpu else 'cpu',
                     }
                 model = xgb.XGBClassifier()
             case 'LightGBM':
@@ -157,6 +157,10 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
                     'l2_leaf_reg': trial.suggest_float('l2_leaf_reg', 0, 10),
                     'task_type': 'GPU' if args.gpu else 'CPU',
                     'verbose': 500,
+                    'cat_features': conf.CAT_FEATURES,
+                    'valid_sets': [(X_val, y_val)],
+                    'random_strength': trial.suggest_float('random_strength', 0.0, 10.0),
+                    'bagging_temperature': trial.suggest_float('bagging_temperature', 0.0, 1.0),
                     }
                 auto_class_weights = trial.suggest_categorical('auto_class_weights', ['Balanced', None]),
                 if auto_class_weights == 'Balanced':
@@ -194,20 +198,6 @@ def main():
     X_train, y_train = split_dataset_Xy(df_train)
     X_val, y_val = split_dataset_Xy(df_val)
 
-
-    # strategies = ('most_frequent', 'stratified', 'uniform')
-    # dmy_scores = []
-    # for strategy in strategies:
-    #     dmy_cls = DummyClassifier(strategy=strategy)
-    #     dmy_cls.fit(X_train, y_train)
-    #     y_proba = dmy_cls.predict_proba(X_val)[:, 1]
-    #     dmy_scores.append((compute_score(args.scoring_method, dmy_cls.predict(X_val), y_val, y_proba), dmy_cls))
-    # baseline_score, dmy_cls = max(dmy_scores)
-    # c_mat = confusion_matrix(y_val, dmy_cls.predict(X_val))
-    # print(f"Baseline strategy: {dmy_cls.strategy}")
-    # print(f"Baseline confusion matrix:\n{c_mat}")
-    # print(f"Baseline score: {baseline_score}\n\n")
-
     wandb.init(
         project='ydata-kaggle-competition',
         config=args,
@@ -222,7 +212,6 @@ def main():
     print(confusion_matrix(y_val, predictions))
     wandb.log({args.scoring_method: score})
     print(f"Final score: {score}")
-    os.makedirs(args.output_path, exist_ok=True)
     save_model(model, args.output_path)
 
 

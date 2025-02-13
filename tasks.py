@@ -13,11 +13,14 @@ if os.name == 'nt':
 else:
     pty_arg = True
 
+    
+
 @task
 def pipeline(
     c,
     csv_for_training=DEFAULT_CSV_FOR_TRAINING,
     limit_data=False,
+    model="default",
     n_trials=50, 
     gpu=False, 
     run_id=None):
@@ -52,6 +55,8 @@ def pipeline(
     #     f"--output-path={experiment.train_path} "
     #     f"{'--gpu' if gpu else ''}"
     #     )
+
+
     
     c.run(
         "python train.py "

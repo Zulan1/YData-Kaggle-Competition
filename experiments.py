@@ -54,7 +54,7 @@ class Experiment:
         self.verbose = verbose
         self.run_id = run_id
         if self.verbose:
-            print(f"\nInitializing experiment {self.run_id}...\n")
+            print(f"\n[experiments.py] Initializing experiment {self.run_id}...\n")
 
         self.data_path = self.DATA_PATH
         self.archived_experiments_path = self.ARCHIVED_EXPERIMENTS_PATH
@@ -119,6 +119,6 @@ class Experiment:
         shutil.copytree(self.experiment_path, f"{self.archived_experiments_path}/{self.experiment_name}")
 
         if self.verbose:
-            print(f"\nExperiment {self.run_id} finished and archived at {self.archived_experiments_path}/{self.experiment_name}")
+            print(f"\n[experiments.py] Experiment {self.run_id} finished and archived at {self.archived_experiments_path}/{self.experiment_name}")
     
 
