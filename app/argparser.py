@@ -98,6 +98,7 @@ def get_preprocessing_args():
     parser.add_argument('--verbose', action='store_true', help='Print additional information')
     parser.add_argument('--mode', type=str, default='train', help='Mode: train, test')
     parser.add_argument('--transformer-path', type=str, default=None,help='Path to transformer file')
+    parser.add_argument('--limit-data', action='store_true', help='Limit data to 1500 rows for testing')
     return parser.parse_args()
 
 def get_predict_args():

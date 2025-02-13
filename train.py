@@ -195,18 +195,18 @@ def main():
     X_val, y_val = split_dataset_Xy(df_val)
 
 
-    strategies = ('most_frequent', 'stratified', 'uniform')
-    dmy_scores = []
-    for strategy in strategies:
-        dmy_cls = DummyClassifier(strategy=strategy)
-        dmy_cls.fit(X_train, y_train)
-        y_proba = dmy_cls.predict_proba(X_val)[:, 1]
-        dmy_scores.append((compute_score(args.scoring_method, dmy_cls.predict(X_val), y_val, y_proba), dmy_cls))
-    baseline_score, dmy_cls = max(dmy_scores)
-    c_mat = confusion_matrix(y_val, dmy_cls.predict(X_val))
-    print(f"Baseline strategy: {dmy_cls.strategy}")
-    print(f"Baseline confusion matrix:\n{c_mat}")
-    print(f"Baseline score: {baseline_score}\n\n")
+    # strategies = ('most_frequent', 'stratified', 'uniform')
+    # dmy_scores = []
+    # for strategy in strategies:
+    #     dmy_cls = DummyClassifier(strategy=strategy)
+    #     dmy_cls.fit(X_train, y_train)
+    #     y_proba = dmy_cls.predict_proba(X_val)[:, 1]
+    #     dmy_scores.append((compute_score(args.scoring_method, dmy_cls.predict(X_val), y_val, y_proba), dmy_cls))
+    # baseline_score, dmy_cls = max(dmy_scores)
+    # c_mat = confusion_matrix(y_val, dmy_cls.predict(X_val))
+    # print(f"Baseline strategy: {dmy_cls.strategy}")
+    # print(f"Baseline confusion matrix:\n{c_mat}")
+    # print(f"Baseline score: {baseline_score}\n\n")
 
     wandb.init(
         project='ydata-kaggle-competition',

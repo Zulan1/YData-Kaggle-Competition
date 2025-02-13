@@ -2,16 +2,21 @@ import pandas as pd
 import constants as cons
 from impute import ClickImputer
 from sklearn.preprocessing import OneHotEncoder
-from feature_engineering import add_features
 import config as conf
-from catboost_transform import catboost_transform
-from feature_registry import FeatureRegistry
+from feature_engineering import prepare_features
+
+def preprocess_data(df: pd.DataFrame) -> pd.DataFrame:
+    float_cols = df.select_dtypes(include=['float']).columns
+    df[float_cols] = df[float_cols].astype(int)
+    return df
 
 class DataTransformer:
-    def __init__(self):
+    def __init__(self, verbose=False):
         self.ohe = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
         self.click_imputer = ClickImputer()
-        self.feature_registry = FeatureRegistry()
+        self.verbose = verbose
+        self.registry = None
+
     def one_hot_encode(self, df: pd.DataFrame):
         encoded_cats = self.ohe.transform(df[cons.COLUMNS_TO_OHE])
         feature_names = self.ohe.get_feature_names_out(cons.COLUMNS_TO_OHE)
@@ -24,13 +29,11 @@ class DataTransformer:
         self.ohe.fit(df[cons.COLUMNS_TO_OHE])
     def transform(self, df: pd.DataFrame):
         df = df.copy()
+        df = preprocess_data(df)
         df = self.click_imputer.transform(df)
-        df, self.feature_registry = add_features(df, add_catboost_features=conf.USE_CATBOOST)
-        if conf.USE_CATBOOST:
-            df = catboost_transform(df)
-        else:
+        df = prepare_features(df, verbose=self.verbose)
+        if not conf.USE_CATBOOST:
             df = self.one_hot_encode(df)
-        df = df.drop(columns=cons.INDEX_COLUMNS + [cons.DATETIME_COLUMN])
         return df
     
     
