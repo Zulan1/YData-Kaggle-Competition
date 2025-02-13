@@ -1,12 +1,4 @@
-import os
-from typing import Tuple
-import config as conf
-
-import numpy as np
-import pandas as pd
-import pickle
 from app.argparser import get_preprocessing_args
-from app.helper_functions import log
 from app.file_manager import (
     save_data_for_test,
     save_data_for_training, save_data_for_validation, get_data, save_transformer, get_transformer, save_data_for_external_test
@@ -15,9 +7,9 @@ import constants as cons
 from splitting import split_data
 from transformer import DataTransformer
 
-def preprocess_towards_training(df):
+def preprocess_towards_training(df, verbose=False):
     """Preprocess training data and retun the fitted DataTransformer."""
-    transformer = DataTransformer()
+    transformer = DataTransformer(verbose=verbose)
     transformer.fit(df)
     df = transformer.transform(df)
     return df, transformer
@@ -34,8 +26,6 @@ def clean_data(df):
     return df
 
 def main():
-
-
     args = get_preprocessing_args()
 
     if args.verbose:
@@ -48,11 +38,16 @@ def main():
         df = df.drop(columns=cons.COLUMNS_TO_DROP)
         df = clean_data(df)
 
+        if args.limit_data:
+            print("Limiting data to 1500 rows for testing.")
+            df = df[:1500]
+
         df_train, df_val, df_test = split_data(df, verbose=args.verbose)
 
         if args.verbose:
             print("\nPreprocessing of data started...")
-        df_train, transformer = preprocess_towards_training(df_train)
+        df_train, transformer = preprocess_towards_training(df_train, args.verbose)
+
         if args.verbose:
             print("Preprocessing of training data completed.")
 
@@ -74,9 +69,11 @@ def main():
     
     elif args.mode == 'inference':
         transformer = get_transformer(args.transformer_path)
-        df = df.dropna()
         df = df.drop(columns=cons.COLUMNS_TO_DROP)
-
+        df = df.dropna()
+        df['is_click'] = df['is_click'].astype(int)
+        if args.limit_data:
+            df = df[:5000]
         df = preprocess_towards_evaluation(df, transformer)
         save_data_for_external_test(df, output_path, args.verbose)
         if args.verbose:

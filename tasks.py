@@ -9,7 +9,8 @@ DEFAULT_CSV_FOR_PREDICTION = f"{Experiment.DATA_PATH}/{Experiment.DEFAULT_INPUT_
 @task
 def pipeline(
     c,
-    csv_for_training=DEFAULT_CSV_FOR_TRAINING, 
+    csv_for_training=DEFAULT_CSV_FOR_TRAINING,
+    limit_data=False,
     n_trials=50, 
     gpu=False, 
     run_id=None):
@@ -22,13 +23,18 @@ def pipeline(
     5. Analyze results
     """
 
+
     experiment = Experiment.new(csv_for_training, verbose=True)
+
+    limit_data_cmd = "--limit-data" if limit_data else ""
+
 
     c.run(
         "python preprocess.py "
         "--mode=train "
         f"--csv-for-preprocessing={experiment.input_csv_for_training} "
         f"--output-path={experiment.preprocess_path} "
+        f"{limit_data_cmd} "
         "--verbose",
         hide=False,
         pty=True
