@@ -2,9 +2,16 @@ import constants as cons
 from invoke import task
 from app.time_utils import get_timestamp_str
 from experiments import Experiment
+import os
 
 DEFAULT_CSV_FOR_TRAINING = f"{Experiment.DATA_PATH}/{Experiment.DEFAULT_INPUT_CSV_FOR_TRAINING}"
 DEFAULT_CSV_FOR_PREDICTION = f"{Experiment.DATA_PATH}/{Experiment.DEFAULT_INPUT_CSV_FOR_PREDICTION}"
+
+# Determine if the current OS is Windows, if not, do not use pty since it is not supported in Windows 
+if os.name == 'nt':
+        pty_arg = False
+else:
+    pty_arg = True
 
 @task
 def pipeline(
@@ -21,7 +28,7 @@ def pipeline(
     4. Generate predictions
     5. Analyze results
     """
-
+    
     experiment = Experiment.new(csv_for_training, verbose=True)
 
     c.run(
@@ -31,7 +38,7 @@ def pipeline(
         f"--output-path={experiment.preprocess_path} "
         "--verbose",
         hide=False,
-        pty=True
+        pty=pty_arg
     )
     
     # c.run(
@@ -48,7 +55,7 @@ def pipeline(
         f"--input-path={experiment.preprocess_path} "
         f"--output-path={experiment.train_path} ",
         hide=False,
-        pty=True
+        pty=pty_arg
     )
     
     c.run(
@@ -59,7 +66,7 @@ def pipeline(
         f"--output-path={experiment.predict_path} "
         "--verbose",
         hide=False,
-        pty=True
+        pty=pty_arg
     )
 
     c.run(
@@ -71,7 +78,7 @@ def pipeline(
         f"--model-path={experiment.model_path} "
         f"--output-path={experiment.result_path}",
         hide=False,
-        pty=True
+        pty=pty_arg
     )
     
     experiment.finish()
@@ -144,7 +151,7 @@ def inference_pipeline(c, run_id, csv_for_prediction=DEFAULT_CSV_FOR_PREDICTION)
         f"--output-path={experiment.preprocess_path} "
         "--verbose ",
         hide=False,
-        pty=True
+        pty=pty_arg
     )
 
     c.run(
@@ -155,7 +162,7 @@ def inference_pipeline(c, run_id, csv_for_prediction=DEFAULT_CSV_FOR_PREDICTION)
         f"--output-path={experiment.predict_path} "
         "--verbose",
         hide=False,
-        pty=True
+        pty=pty_arg
     )
 
     experiment.finish()
