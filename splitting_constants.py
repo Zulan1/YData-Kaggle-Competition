@@ -17,10 +17,8 @@ PRODUCT_TO_LEAVE = 'A'
 USER_GROUP_TO_LEAVE = 5
 
 # Default behaviors for excluding data from training.
-DEFAULT_LEAVE_ONE_PRODUCT_OUT = False      # By default, exclude sessions with the specified product.
-DEFAULT_LEAVE_ONE_USER_GROUP_OUT = False   # By default, exclude sessions with the specified user group.
-LEAVE_ONE_PRODUCT_OUT = False
-LEAVE_ONE_USER_GROUP_OUT = False
+DEFAULT_LEAVE_ONE_PRODUCT_OUT = True      # By default, exclude sessions with the specified product.
+LEAVE_ONE_PRODUCT_OUT = True
 
 # Default random state for reproducible splits.
 RANDOM_STATE = 42 

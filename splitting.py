@@ -22,16 +22,12 @@ class DataSplitter:
                  split_ratios=splitting_constants.TRAIN_TEST_VAL_SPLIT, 
                  random_state=conf.RANDOM_STATE,
                  test_product=splitting_constants.PRODUCT_TO_LEAVE, 
-                 test_user_group=splitting_constants.USER_GROUP_TO_LEAVE,
                  leave_one_product_out=splitting_constants.DEFAULT_LEAVE_ONE_PRODUCT_OUT,
-                 leave_one_user_group_out=splitting_constants.DEFAULT_LEAVE_ONE_USER_GROUP_OUT,
                  verbose=False):
         self.split_ratios = split_ratios
         self.random_state = random_state
         self.test_product = test_product
-        self.test_user_group = test_user_group
         self.leave_one_product_out = leave_one_product_out
-        self.leave_one_user_group_out = leave_one_user_group_out
         self.verbose = verbose
         
     def split_data(self, df: pd.DataFrame):
@@ -72,10 +68,6 @@ class DataSplitter:
         df_val = pd.concat([normal_val, rare_val]).sort_index()
         df_test = pd.concat([normal_test, rare_test]).sort_index()
         
-        # Optionally remove the test user group from the training set.
-        if self.leave_one_user_group_out:
-            df_train = df_train[df_train['user_group_id'] != self.test_user_group]
-        
         # Calculate summary statistics for logging purposes.
         total_sessions = len(df)
         train_pct = (len(df_train) / total_sessions) * 100
@@ -93,8 +85,6 @@ class DataSplitter:
             print(f"[splitting.py] Test sessions: {test_pct:.2f}% of total, CTR: {test_ctr:.4f}")
             if self.leave_one_product_out:
                 print("[splitting.py] Test product left out of training set: ", self.test_product)
-            if self.leave_one_user_group_out:
-                print("[splitting.py] Test user group removed from training data: ", self.test_user_group)
         
         # Integrity check: enforce test product removal if configured.
         if self.leave_one_product_out:
