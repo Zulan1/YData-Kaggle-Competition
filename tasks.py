@@ -6,6 +6,8 @@ from experiments import Experiment
 DEFAULT_CSV_FOR_TRAINING = f"{Experiment.DATA_PATH}/{Experiment.DEFAULT_INPUT_CSV_FOR_TRAINING}"
 DEFAULT_CSV_FOR_PREDICTION = f"{Experiment.DATA_PATH}/{Experiment.DEFAULT_INPUT_CSV_FOR_PREDICTION}"
 
+pty_arg = False
+
 @task
 def pipeline(
     c,
@@ -31,7 +33,7 @@ def pipeline(
         f"--output-path={experiment.preprocess_path} "
         "--verbose",
         hide=False,
-        pty=True
+        pty=pty_arg
     )
     
     # c.run(
@@ -48,7 +50,7 @@ def pipeline(
         f"--input-path={experiment.preprocess_path} "
         f"--output-path={experiment.train_path} ",
         hide=False,
-        pty=True
+        pty=pty_arg
     )
     
     c.run(
@@ -59,7 +61,7 @@ def pipeline(
         f"--output-path={experiment.predict_path} "
         "--verbose",
         hide=False,
-        pty=True
+        pty=pty_arg
     )
 
     c.run(
@@ -71,7 +73,7 @@ def pipeline(
         f"--model-path={experiment.model_path} "
         f"--output-path={experiment.result_path}",
         hide=False,
-        pty=True
+        pty=pty_arg
     )
     
     experiment.finish()
@@ -144,7 +146,7 @@ def inference_pipeline(c, run_id, csv_for_prediction=DEFAULT_CSV_FOR_PREDICTION)
         f"--output-path={experiment.preprocess_path} "
         "--verbose ",
         hide=False,
-        pty=True
+        pty=pty_arg
     )
 
     c.run(
@@ -155,7 +157,7 @@ def inference_pipeline(c, run_id, csv_for_prediction=DEFAULT_CSV_FOR_PREDICTION)
         f"--output-path={experiment.predict_path} "
         "--verbose",
         hide=False,
-        pty=True
+        pty=pty_arg
     )
 
     experiment.finish()
