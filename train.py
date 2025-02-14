@@ -13,7 +13,6 @@ import json
 import pandas as pd
 import config as conf
 
-from sklearn.metrics import confusion_matrix
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import f1_score
 from sklearn.metrics import balanced_accuracy_score
@@ -24,7 +23,7 @@ from app.file_manager import get_val_set, get_train_set, load_full_processed_tra
 from app.file_manager import save_model
 from app.argparser import get_train_args
 from app.helper_functions import split_dataset_Xy
-from metamodel import MetaModel
+from meta_prediction import MetaModel
 
 from catboost_transform import catboost_transform
 
@@ -219,7 +218,7 @@ def main():
         print(f"[train.py] Validation set loaded. Shape: {X_val.shape}, {y_val.shape}")
 
     # Initialize WandB for tracking
-    #wandb.init(project='ydata-kaggle-competition', config=vars(args))
+    wandb.init(project='ydata-kaggle-competition', config=vars(args))
     
     if args.use_default_model:
         if args.verbose:
@@ -298,14 +297,14 @@ def main():
     print(y_proba.min(), y_proba.max(), y_proba.mean())
     y_pred = model.predict(X_val)
     score = compute_score(args.scoring_method, y_val, y_pred, y_proba)
-    print("Final Score on Validation Set: ", score)
-    print("F1 Score on Validation Set: ", f1_score(y_val, y_pred))
-    print("Balanced Accuracy on Validation Set: ", balanced_accuracy_score(y_val, y_pred))
+    print("[train.py] Final Score on Validation Set: ", score)
+    print("[train.py] F1 Score on Validation Set: ", f1_score(y_val, y_pred))
+    print("[train.py] Balanced Accuracy on Validation Set: ", balanced_accuracy_score(y_val, y_pred))
 
 
     
     # Log score and save the model
-    #wandb.log({args.scoring_method: score})
+    wandb.log({args.scoring_method: score})
     save_model(model, args.output_path)
 
     if args.verbose:

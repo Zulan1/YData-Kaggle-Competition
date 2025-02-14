@@ -13,17 +13,45 @@ if os.name == 'nt':
 else:
     pty_arg = True
 
-    
+
+@task
+def train_pipeline(c,
+                   csv_for_training=DEFAULT_CSV_FOR_TRAINING,
+                   limit_data=False,
+                   n_trials=100, 
+                   gpu=False):
+     
+     experiment = Experiment.new(csv_for_training, verbose=True)
+
+     limit_data_cmd = "--limit-data" if limit_data else ""
+
+     c.run("python preprocess.py "
+           "--mode=train "
+           f"--csv-for-preprocessing={experiment.input_csv_for_training} "
+           f"--output-path={experiment.preprocess_path} "
+           f"{limit_data_cmd} "
+           "--verbose",
+           hide=False,
+           pty=pty_arg
+           )
+     
+     c.run(
+         f"python train.py --optuna-search "
+         f"--input-path={experiment.preprocess_path} "
+         f"--n-trials={n_trials} "
+         f"--output-path={experiment.train_path} "
+         f"{'--gpu' if gpu else ''}"
+         )
+     
+     experiment.finish()
+
 
 @task
 def pipeline(
     c,
     csv_for_training=DEFAULT_CSV_FOR_TRAINING,
     limit_data=False,
-    model="default",
-    n_trials=100, 
-    gpu=False, 
-    run_id=None):
+    gpu=False):
 
     """Run full training pipeline:
     1. Preprocess training data
@@ -36,25 +64,17 @@ def pipeline(
 
     limit_data_cmd = "--limit-data" if limit_data else ""
 
-
     c.run(
         "python preprocess.py "
         "--mode=train "
         f"--csv-for-preprocessing={experiment.input_csv_for_training} "
         f"--output-path={experiment.preprocess_path} "
         f"{limit_data_cmd} "
+        f"{'--gpu' if gpu else ''}"
         "--verbose",
         hide=False,
         pty=pty_arg
     )
-
-    # c.run(
-    #     f"python train.py --optuna-search "
-    #     f"--input-path={experiment.preprocess_path} "
-    #     f"--n-trials={n_trials} "
-    #     f"--output-path={experiment.train_path} "
-    #     f"{'--gpu' if gpu else ''}"
-    #     )
     
     c.run(
         f"python train.py --use-default-model "
@@ -88,15 +108,6 @@ def pipeline(
     )
     
     experiment.finish()
-
-def new_func(c, n_trials, gpu, experiment):
-    c.run(
-         f"python train.py --optuna-search "
-         f"--input-path={experiment.preprocess_path} "
-         f"--n-trials={n_trials} "
-         f"--output-path={experiment.train_path} "
-         f"{'--gpu' if gpu else ''}"
-         )
 
 @task
 def inference_pipeline(c, run_id, csv_for_prediction=DEFAULT_CSV_FOR_PREDICTION):

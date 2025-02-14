@@ -101,10 +101,10 @@ def save_full_model(model, output_path):
 
 def save_predictions(df, output_path, verbose):
     predictions_path = os.path.join(output_path, cons.DEFAULT_PREDICTIONS_FILE)
-    """Save predictions to a CSV file."""
-    df.to_csv(predictions_path, index=False)
+    """Save predictions to a CSV file without the 'is_click' header."""
+    df.to_csv(predictions_path, index=False, header=False)
     if verbose:
-        log(f"[file_manager.py] Predictions saved to {predictions_path}", verbose)
+        log(f"[file_manager.py] Predictions saved to {predictions_path} (header excluded)", verbose)
     return
 
 def save_predicted_probabilities(df, output_path, verbose):
