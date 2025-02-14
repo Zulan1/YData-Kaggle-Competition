@@ -9,7 +9,6 @@ from app.argparser import get_predict_args
 import pandas as pd
 import constants as cons
 from app.file_manager import get_model, get_test_features, save_predictions, save_predicted_probabilities
-from sklearn.metrics import precision_recall_curve
 
 def get_predicted_probabilities(model, df):
     """
