@@ -15,6 +15,8 @@ import config as conf
 
 from sklearn.metrics import confusion_matrix
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.metrics import f1_score
+from sklearn.metrics import balanced_accuracy_score
 
 
 from app.metrics import compute_score
@@ -22,6 +24,7 @@ from app.file_manager import get_val_set, get_train_set, load_full_processed_tra
 from app.file_manager import save_model
 from app.argparser import get_train_args
 from app.helper_functions import split_dataset_Xy
+from metamodel import MetaModel
 
 from catboost_transform import catboost_transform
 
@@ -184,7 +187,7 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
         model.fit(X_train, y_train)
         y_pred = model.predict(X_val)
         print(f"{(y_pred == 1).sum()} out of {len(y_pred)} are 1")
-        y_proba = model.predict_proba(X_val)[:, 1]
+        y_proba = model.predict_proba(X_val)
         train_score = compute_score(args.scoring_method, y_val, y_pred, y_proba)
         val_score = compute_score(args.scoring_method, y_val, y_pred, y_proba)
         val_precision = compute_score('precision', y_val, y_pred)
@@ -198,7 +201,7 @@ def hyperparameter_search(X_train, y_train, X_val, y_val, args):
     print(f"Finished {args.n_trials} found best params: {best_trial.params}, with score: {best_trial.values[0]}.")
 
     # Log to Weights & Biases (if needed)
-  #  wandb.log({"best_hyperparameters": best_trial.params})
+    wandb.log({"best_hyperparameters": best_trial.params})
 
     return best_trial.params
 
@@ -216,7 +219,7 @@ def main():
         print(f"[train.py] Validation set loaded. Shape: {X_val.shape}, {y_val.shape}")
 
     # Initialize WandB for tracking
-    wandb.init(project='ydata-kaggle-competition', config=vars(args))
+    #wandb.init(project='ydata-kaggle-competition', config=vars(args))
     
     if args.use_default_model:
         if args.verbose:
@@ -284,29 +287,25 @@ def main():
             "snapshot_interval": 0,
             "allow_writing_files": False,
             "random_seed": 42,
+            "auto_class_weights": "Balanced",
         })
         model = cb.CatBoostClassifier(**best_params)
 
     # Train the final model on training data
-    model.fit(X_train, y_train, eval_set=(X_val, y_val), verbose=False)
-    if args.verbose:
-        print(f"[train.py] Training completed. Model saved to {args.output_path}.")
-    print(f"[train.py] Predicting on validation set")
-    predictions = model.predict(X_val)
-    y_proba = model.predict_proba(X_val)[:, 1]
-    score = compute_score(args.scoring_method, y_val, predictions, y_proba)
+    model = MetaModel(model)
+    model.fit(X_train, y_train)
+    y_proba = model.predict_proba(X_val)
+    print(y_proba.min(), y_proba.max(), y_proba.mean())
+    y_pred = model.predict(X_val)
+    score = compute_score(args.scoring_method, y_val, y_pred, y_proba)
     print("Final Score on Validation Set: ", score)
-    if args.verbose:
-        print(f"[train.py] Predicting on training set")
-        predictions = model.predict(X_train)
-        y_proba = model.predict_proba(X_train)[:, 1]
-    score = compute_score(args.scoring_method, y_train, predictions, y_proba)
-    print("Final Score on Training Set: ", score)
+    print("F1 Score on Validation Set: ", f1_score(y_val, y_pred))
+    print("Balanced Accuracy on Validation Set: ", balanced_accuracy_score(y_val, y_pred))
 
 
     
     # Log score and save the model
-    wandb.log({args.scoring_method: score})
+    #wandb.log({args.scoring_method: score})
     save_model(model, args.output_path)
 
     if args.verbose:
@@ -314,12 +313,12 @@ def main():
     
     print(f"[train.py] Training model on full training set for future inference")
 
-    df_full = load_full_processed_training(args.input_path)
-    X_full, y_full = split_dataset_Xy(df_full)
-    model.fit(X_full, y_full)
-    save_full_model(model, args.output_path)
-    if args.verbose:
-        print(f"[train.py] Full model saved to {args.output_path}.")
+    # df_full = load_full_processed_training(args.input_path)
+    # X_full, y_full = split_dataset_Xy(df_full)
+    # model.fit(X_full, y_full)
+    # save_full_model(model, args.output_path)
+    # if args.verbose:
+    #     print(f"[train.py] Full model saved to {args.output_path}.")
 
 if __name__ == "__main__":
     main()

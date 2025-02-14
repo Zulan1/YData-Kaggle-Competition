@@ -14,7 +14,6 @@ class DataCleaner:
         self.columns_to_drop = cons.COLUMNS_TO_DROP
 
     def filter_training_data(self, df: pd.DataFrame) -> pd.DataFrame:
-
         df = df.copy()
         df.loc[df['age_level'] == 0, 'age_level'] = np.nan
         initial_rows = len(df)

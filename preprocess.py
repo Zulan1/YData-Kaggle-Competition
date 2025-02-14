@@ -8,6 +8,7 @@ import pandas as pd
 from transformer import DataTransformer
 from splitting import DataSplitter
 from data_cleaning import DataCleaner
+
 def preprocess_towards_training(df, verbose=False):
     """Preprocess training data and return the fitted DataTransformer."""
     transformer = DataTransformer(verbose=verbose)

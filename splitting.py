@@ -12,9 +12,7 @@ class DataSplitter:
         split_ratios (tuple of float): Fractions for splitting data into (train, validation, test). Must sum to 1.
         random_state (int): Seed used for reproducibility.
         test_product (any): The product that may be withheld from the training data.
-        test_user_group (any): The user group that may be removed from the training data.
         leave_one_product_out (bool): If True, removes sessions with the test product from training.
-        leave_one_user_group_out (bool): If True, removes sessions with the test user group from training.
         verbose (bool): If True, prints detailed splitting statistics.
     """
     
