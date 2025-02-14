@@ -1,7 +1,6 @@
 import pandas as pd
 import constants as cons
 from impute import ClickDataImputer
-from sklearn.preprocessing import OneHotEncoder
 from feature_engineering import prepare_features
 
 def cast_float_columns_to_int(df: pd.DataFrame) -> pd.DataFrame:

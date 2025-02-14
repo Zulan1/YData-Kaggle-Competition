@@ -97,8 +97,8 @@ def pipeline(
 
     c.run(
         f"python result.py "
+        f"--predicted-labels-path={experiment.predicted_labels_path} "
         f"--predictions-path={experiment.predictions_path} "
-        f"--predicted-probabilities-path={experiment.predictions_probabilities_path} "
         f"--labels-path={experiment.labels_path} "
         f"--features-path={experiment.features_path} "
         f"--model-path={experiment.model_path} "

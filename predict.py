@@ -8,7 +8,7 @@ and then saves these results to disk.
 from app.argparser import get_predict_args
 import pandas as pd
 import constants as cons
-from app.file_manager import get_model, get_test_features, save_predictions, save_predicted_probabilities
+from app.file_manager import get_model, get_test_features, save_predictions, save_predicted_labels
 
 def get_predicted_probabilities(model, df):
     """
@@ -57,11 +57,12 @@ def main():
         print(f"[predict.py] Features shape: {df.shape}")
         print(f"\n[predict.py] Predicting {cons.TARGET_COLUMN}...")
 
-    predictions = get_predictions(model, df)
+    predictions = get_predicted_probabilities(model, df)
     save_predictions(predictions, args.output_path, args.verbose)
-    
-    probabilities = get_predicted_probabilities(model, df)
-    save_predicted_probabilities(probabilities, args.output_path, args.verbose)
+
+    predicted_labels = get_predictions(model, df)
+    save_predicted_labels(predicted_labels, args.output_path, args.verbose)
+
 
 if __name__ == '__main__':
     main()
