@@ -521,8 +521,8 @@ FEATURES_LIST = [
     {"name": "many_identical_sessions", "scope": "user", "categorical": False, "func": many_identical_sessions_func, "threshold": True},
     {"name": "mixed_city_development_index_known", "scope": "user", "categorical": False, "func": mixed_city_development_index_known_func, "threshold": True},
     {"name": "mixed_product_category_2_known", "scope": "user", "categorical": False, "func": mixed_product_category_2_known_func, "threshold": True},
-    {"name": "user_uniform_var1", "scope": "user", "categorical": False, "func": user_uniform_var1_func, "threshold": True},
-    {"name": "session_day_of_week", "scope": "session", "categorical": True, "func": session_day_of_week_func, "threshold": True}
+    {"name": "user_uniform_var1", "scope": "user", "categorical": False, "func": user_uniform_var1_func, "threshold": True}
+ #   {"name": "session_day_of_week", "scope": "session", "categorical": True, "func": session_day_of_week_func, "threshold": True}
 ]
 
 NUMERICAL_THRESHOLD_FEATURES = [feat["name"] for feat in FEATURES_LIST if feat["threshold"] and not feat["categorical"]]

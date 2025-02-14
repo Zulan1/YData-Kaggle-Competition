@@ -6,7 +6,7 @@ LEAVE_ONE_PRODUCT_OUT = True
 
 DEFAULT_MODEL = 'CatBoost'
 CAT_FEATURES = ['product', 'campaign_id', 'webpage_id', 'product_category', 'user_group_id', 'gender', 'var_1', 'session_time_of_day', 'user_depth'] + \
-['secondary_product_category_known', 'city_development_index_known', 'session_day_of_week']
+['secondary_product_category_known', 'city_development_index_known']
 
 
 DEFAULT_MODEL_PARAMS = {
