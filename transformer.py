@@ -25,7 +25,6 @@ class DataTransformer:
     """
     def __init__(self, verbose: bool = False):
         self.verbose = verbose
-        self.ohe = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
         self.ctr_imputer = ClickDataImputer()
         self.features = []
 
@@ -54,7 +53,6 @@ class DataTransformer:
             df (pd.DataFrame): DataFrame to fit on.
         """
         self.ctr_imputer.fit(df)
-        self.ohe.fit(df[cons.COLUMNS_TO_OHE])
 
     def transform(self, df: pd.DataFrame) -> pd.DataFrame:
         """

@@ -1,5 +1,11 @@
 import pandas as pd
 import constants as cons
+import numpy as np
+
+"""
+Data cleaning class. Drop missing values and duplicates. 
+For columns with high missing values, keep track of whether the value is known or not.
+"""
 
 class DataCleaner:
     def __init__(self, verbose: bool = False, mode: str = 'train'):
@@ -8,22 +14,22 @@ class DataCleaner:
         self.columns_to_drop = cons.COLUMNS_TO_DROP
 
     def filter_training_data(self, df: pd.DataFrame) -> pd.DataFrame:
-        # Drop duplicate rows first.
+        df = df.copy()
+        df.loc[df['age_level'] == 0, 'age_level'] = np.nan
         initial_rows = len(df)
         df = df.dropna(subset=['session_id'])
+        if self.verbose:
+            print(f"[DataCleaner] Dropped {initial_rows - len(df)} rows containing NaN values in 'session_id' column.")
         df = df.drop_duplicates()
-        df = df.dropna()
+        initial_rows = len(df)
         duplicates_removed = initial_rows - len(df)
         if self.verbose:
             print(f"[DataCleaner] Dropped {duplicates_removed} duplicate rows.")
-
-        # Then drop rows containing NaN values.
         rows_before_na = len(df)
         df = df.dropna()
         na_removed = rows_before_na - len(df)
         if self.verbose:
             print(f"[DataCleaner] Dropped {na_removed} rows containing NaN values.")
-
         return df
 
     def clean_data(self, df: pd.DataFrame) -> pd.DataFrame:

@@ -13,6 +13,7 @@ class Feature:
     name: str
     scope: str = 'session'
     categorical: bool = False
+    threshold: bool = False
     
     @property
     def dtype(self) -> str:

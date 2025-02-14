@@ -1,12 +1,14 @@
 from app.argparser import get_preprocessing_args
 from app.file_manager import (
     save_data_for_test,
-    save_data_for_training, save_data_for_validation, get_data, save_transformer, get_transformer, save_data_for_external_test
+    save_data_for_training, save_data_for_validation, get_data, save_transformer, get_transformer, save_data_for_external_test, save_full_processed_training
 )
 import constants as cons
+import pandas as pd
 from transformer import DataTransformer
 from splitting import DataSplitter
 from data_cleaning import DataCleaner
+
 def preprocess_towards_training(df, verbose=False):
     """Preprocess training data and return the fitted DataTransformer."""
     transformer = DataTransformer(verbose=verbose)
@@ -66,18 +68,20 @@ def main():
         df_test = preprocess_towards_evaluation(df_test, transformer)
         if args.verbose:
             print("[preprocess.py] Preprocessing of test data completed.")
+        
+        df_full = pd.concat([df_train, df_val, df_test], ignore_index=True)
 
         save_transformer(transformer, output_path, args.verbose)
         save_data_for_training(df_train, output_path)
         save_data_for_validation(df_val, output_path)
         save_data_for_test(df_test, output_path, args.verbose)
+        save_full_processed_training(df_full, output_path)
 
         if args.verbose:
             print(f"\n[preprocess.py] Preprocessing of data completed. Data saved to {output_path}.")
     
     elif args.mode == 'inference':
         transformer = get_transformer(args.transformer_path)
-        df = df.drop(columns=cons.COLUMNS_TO_DROP)
         if args.limit_data:
             df = df[:1500]
         df = preprocess_towards_evaluation(df, transformer)

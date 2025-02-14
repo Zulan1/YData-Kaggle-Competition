@@ -1,6 +1,7 @@
 from sklearn.impute import SimpleImputer
 import constants as cons
 import pandas as pd
+import numpy as np
 
 class ClickDataImputer:
     """Handles imputation of missing values in click data."""
@@ -28,6 +29,7 @@ class ClickDataImputer:
         If self.verbose is True, prints the number of missing values replaced.
         """
         df = df.copy()
+        df.loc[df['age_level'] == 0, 'age_level'] = np.nan
         
         # Determine all columns to monitor for missing values.
         impute_columns = set(["user_id", "session_id"]).union(set(self.columns_to_impute))

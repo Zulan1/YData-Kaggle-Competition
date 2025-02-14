@@ -430,57 +430,95 @@ def session_mixed_city_development_index_known_func(df: pd.DataFrame) -> pd.Seri
     series.name = "session_mixed_city_development_index_known"
     return series.astype(int)
 
+def session_mixed_var1_func(df: pd.DataFrame) -> pd.Series:
+    """
+    For each session, checks if there is another session with the same user_id and DateTime 
+    that has a different value of 'var1'.
+    
+    Returns:
+        A binary (0/1) Pandas Series. 1 indicates that, within the group of sessions 
+        (sharing the same user_id and DateTime), there exists at least one session with a var1 value 
+        different from the others; 0 indicates that all sessions in the group have the same var1 value.
+        
+    This is a non-categorical, session-based feature.
+    """
+    series = df.groupby(["user_id", "DateTime"])["var_1"].transform(lambda x: int(x.nunique() > 1))
+    series.name = "session_mixed_var1"
+    return series.astype(int)
+
+def user_uniform_var1_func(df: pd.DataFrame) -> pd.Series:
+    """
+    For each user, tests whether the 'var1' values are uniform across all sessions.
+    
+    Process:
+      1. Group the DataFrame by 'user_id' and count the number of unique 'var1' values.
+      2. If a user has only one unique 'var1' value (i.e., uniform), mark as 1; otherwise, mark as 0.
+    
+    Returns:
+        A non-categorical (0/1) user-based feature as a Pandas Series named "user_uniform_var1".
+    """
+    uniform = df.groupby("user_id")["var_1"].nunique().apply(lambda x: 1 if x == 1 else 0)
+    result = df["user_id"].map(uniform)
+    result.name = "user_uniform_var1"
+    return result.astype(int)
+
 # -----------------------------------------------------------------------------
 # Definition of the final feature list including function pointers.
 # -----------------------------------------------------------------------------
 FEATURES_LIST = [
     # --- Original Features ---
-    {"name": "product", "scope": "session", "categorical": True, "func": make_original_feature_func("product")},
-    {"name": "product_category", "scope": "session", "categorical": True, "func": make_original_feature_func("product_category")},
-    {"name": "campaign_id", "scope": "session", "categorical": True, "func": make_original_feature_func("campaign_id")},
-    {"name": "webpage_id", "scope": "session", "categorical": True, "func": make_original_feature_func("webpage_id")},
-    {"name": "user_group_id", "scope": "user", "categorical": False, "func": make_original_feature_func("user_group_id")},
-    {"name": "gender", "scope": "user", "categorical": True, "func": make_original_feature_func("gender")},
-    {"name": "var_1", "scope": "session", "categorical": False, "func": make_original_feature_func("var_1")},
-    {"name": "user_depth", "scope": "user", "categorical": True, "func": make_original_feature_func("user_depth")},
-    {"name": "age_level", "scope": "user", "categorical": False, "func": make_original_feature_func("age_level")},
-    {"name": "secondary_product_category_known", "scope": "session", "categorical": False, "func": make_original_feature_func("secondary_product_category_known")},
-    {"name": "city_development_index_known", "scope": "session", "categorical": False, "func": make_original_feature_func("city_development_index_known")},
-
+    {"name": "product", "scope": "session", "categorical": True, "func": make_original_feature_func("product"), "threshold": True},
+    {"name": "product_category", "scope": "session", "categorical": True, "func": make_original_feature_func("product_category"), "threshold": True},
+    {"name": "campaign_id", "scope": "session", "categorical": True, "func": make_original_feature_func("campaign_id"), "threshold": True},
+    {"name": "webpage_id", "scope": "session", "categorical": True, "func": make_original_feature_func("webpage_id"), "threshold": True},
+    {"name": "user_group_id", "scope": "user", "categorical": False, "func": make_original_feature_func("user_group_id"), "threshold": False},
+    {"name": "gender", "scope": "user", "categorical": True, "func": make_original_feature_func("gender"), "threshold": False},
+    {"name": "var_1", "scope": "session", "categorical": False, "func": make_original_feature_func("var_1"), "threshold": False},
+    {"name": "user_depth", "scope": "user", "categorical": True, "func": make_original_feature_func("user_depth"), "threshold": False},
+    {"name": "age_level", "scope": "user", "categorical": False, "func": make_original_feature_func("age_level"), "threshold": True},
+    {"name": "secondary_product_category_known", "scope": "session", "categorical": False, "func": make_original_feature_func("secondary_product_category_known"), "threshold": False},
+    {"name": "city_development_index_known", "scope": "session", "categorical": False, "func": make_original_feature_func("city_development_index_known"), "threshold": False},
+    
     # --- Engineered Session-level Features ---
-    {"name": "daily_sessions_count", "scope": "session", "categorical": False, "func": daily_sessions_count_func},
-    {"name": "has_viewed_category_before", "scope": "session", "categorical": False, "func": has_viewed_category_before_func},
-    {"name": "has_viewed_campaign_before", "scope": "session", "categorical": False, "func": has_viewed_campaign_before_func},
-    {"name": "daily_webpage_count", "scope": "session", "categorical": False, "func": daily_webpage_count_func},
-    {"name": "prev_session_same_product", "scope": "session", "categorical": False, "func": prev_session_same_product_func},
-    {"name": "session_time_of_day", "scope": "session", "categorical": True, "func": session_time_of_day_func},
-    {"name": "duplicate_timestamp_session_count", "scope": "session", "categorical": False, "func": duplicate_timestamp_session_count_func},
-    {"name": "product_diversity_same_timestamp", "scope": "session", "categorical": False, "func": product_diversity_same_timestamp_func},
-    {"name": "webpage_diversity_same_timestamp", "scope": "session", "categorical": False, "func": webpage_diversity_same_timestamp_func},
-    {"name": "session_mixed_secondary_product_category_known", "scope": "session", "categorical": False, "func": session_mixed_secondary_product_category_known_func},
-    {"name": "session_mixed_city_development_index_known", "scope": "session", "categorical": False, "func": session_mixed_city_development_index_known_func},
-
+    {"name": "daily_sessions_count", "scope": "session", "categorical": False, "func": daily_sessions_count_func, "threshold": True},
+    {"name": "has_viewed_category_before", "scope": "session", "categorical": False, "func": has_viewed_category_before_func, "threshold": True},
+    {"name": "has_viewed_campaign_before", "scope": "session", "categorical": False, "func": has_viewed_campaign_before_func, "threshold": True},
+    {"name": "daily_webpage_count", "scope": "session", "categorical": False, "func": daily_webpage_count_func, "threshold": True},
+    {"name": "prev_session_same_product", "scope": "session", "categorical": False, "func": prev_session_same_product_func, "threshold": True},
+    {"name": "session_time_of_day", "scope": "session", "categorical": True, "func": session_time_of_day_func, "threshold": False},
+    {"name": "duplicate_timestamp_session_count", "scope": "session", "categorical": False, "func": duplicate_timestamp_session_count_func, "threshold": True},
+    {"name": "product_diversity_same_timestamp", "scope": "session", "categorical": False, "func": product_diversity_same_timestamp_func, "threshold": True},
+    {"name": "webpage_diversity_same_timestamp", "scope": "session", "categorical": False, "func": webpage_diversity_same_timestamp_func, "threshold": True},
+    {"name": "session_mixed_secondary_product_category_known", "scope": "session", "categorical": False, "func": session_mixed_secondary_product_category_known_func, "threshold": True},
+    {"name": "session_mixed_city_development_index_known", "scope": "session", "categorical": False, "func": session_mixed_city_development_index_known_func, "threshold": True},
+    {"name": "session_mixed_var1", "scope": "session", "categorical": False, "func": session_mixed_var1_func, "threshold": True},
+    
     # --- Engineered User-level Features ---
-    {"name": "is_high_volume_user", "scope": "user", "categorical": False, "func": is_high_volume_user_func},
-    {"name": "distinct_products_count", "scope": "user", "categorical": False, "func": distinct_products_count_func},
-    {"name": "distinct_categories_count", "scope": "user", "categorical": False, "func": distinct_categories_count_func},
-    {"name": "distinct_campaigns_count", "scope": "user", "categorical": False, "func": distinct_campaigns_count_func},
-    {"name": "distinct_webpages_count", "scope": "user", "categorical": False, "func": distinct_webpages_count_func},
-    {"name": "most_common_time_of_day", "scope": "user", "categorical": True, "func": most_common_time_of_day_func},
-    {"name": "total_active_days", "scope": "user", "categorical": False, "func": total_active_days_func},
-    {"name": "sessions_with_min_gap_count", "scope": "user", "categorical": False, "func": sessions_with_min_gap_count_func},
-    {"name": "excess_duplicate_timestamps", "scope": "user", "categorical": False, "func": excess_duplicate_timestamps_func},
-    {"name": "early_morning_sessions_count", "scope": "user", "categorical": False, "func": early_morning_sessions_count_func},
-    {"name": "user_product_diversity", "scope": "user", "categorical": False, "func": user_product_diversity_func},
-    {"name": "user_campaign_diversity", "scope": "user", "categorical": False, "func": user_campaign_diversity_func},
-    {"name": "user_webpage_diversity", "scope": "user", "categorical": False, "func": user_webpage_diversity_func},
-    {"name": "same_timestamp_session_count", "scope": "user", "categorical": False, "func": same_timestamp_session_count_func},
-    {"name": "max_daily_user_activity_spread", "scope": "user", "categorical": False, "func": max_daily_user_activity_spread_func},
-    {"name": "max_same_timestamp_session_count", "scope": "user", "categorical": False, "func": max_same_timestamp_session_count_func},
-    {"name": "many_identical_sessions", "scope": "user", "categorical": False, "func": many_identical_sessions_func},
-    {"name": "mixed_city_development_index_known", "scope": "user", "categorical": False, "func": mixed_city_development_index_known_func},
-    {"name": "mixed_product_category_2_known", "scope": "user", "categorical": False, "func": mixed_product_category_2_known_func},
+    {"name": "is_high_volume_user", "scope": "user", "categorical": False, "func": is_high_volume_user_func, "threshold": True},
+    {"name": "distinct_products_count", "scope": "user", "categorical": False, "func": distinct_products_count_func, "threshold": True},
+    {"name": "distinct_categories_count", "scope": "user", "categorical": False, "func": distinct_categories_count_func, "threshold": True},
+    {"name": "distinct_campaigns_count", "scope": "user", "categorical": False, "func": distinct_campaigns_count_func, "threshold": True},
+    {"name": "distinct_webpages_count", "scope": "user", "categorical": False, "func": distinct_webpages_count_func, "threshold": True},
+    {"name": "most_common_time_of_day", "scope": "user", "categorical": True, "func": most_common_time_of_day_func, "threshold": False},
+    {"name": "total_active_days", "scope": "user", "categorical": False, "func": total_active_days_func, "threshold": False},
+    {"name": "sessions_with_min_gap_count", "scope": "user", "categorical": False, "func": sessions_with_min_gap_count_func, "threshold": True},
+    {"name": "excess_duplicate_timestamps", "scope": "user", "categorical": False, "func": excess_duplicate_timestamps_func, "threshold": True},
+    {"name": "early_morning_sessions_count", "scope": "user", "categorical": False, "func": early_morning_sessions_count_func, "threshold": True},
+    {"name": "user_product_diversity", "scope": "user", "categorical": False, "func": user_product_diversity_func, "threshold": True},
+    {"name": "user_campaign_diversity", "scope": "user", "categorical": False, "func": user_campaign_diversity_func, "threshold": True},
+    {"name": "user_webpage_diversity", "scope": "user", "categorical": False, "func": user_webpage_diversity_func, "threshold": True},
+    {"name": "same_timestamp_session_count", "scope": "user", "categorical": False, "func": same_timestamp_session_count_func, "threshold": True},
+    {"name": "max_daily_user_activity_spread", "scope": "user", "categorical": False, "func": max_daily_user_activity_spread_func, "threshold": True},
+    {"name": "max_same_timestamp_session_count", "scope": "user", "categorical": False, "func": max_same_timestamp_session_count_func, "threshold": True},
+    {"name": "many_identical_sessions", "scope": "user", "categorical": False, "func": many_identical_sessions_func, "threshold": True},
+    {"name": "mixed_city_development_index_known", "scope": "user", "categorical": False, "func": mixed_city_development_index_known_func, "threshold": True},
+    {"name": "mixed_product_category_2_known", "scope": "user", "categorical": False, "func": mixed_product_category_2_known_func, "threshold": True},
+    {"name": "user_uniform_var1", "scope": "user", "categorical": False, "func": user_uniform_var1_func, "threshold": True},
 ]
+
+NUMERICAL_THRESHOLD_FEATURES = [feat["name"] for feat in FEATURES_LIST if feat["threshold"] and not feat["categorical"]]
+CATEGORICAL_THRESHOLD_FEATURES = [feat["name"] for feat in FEATURES_LIST if feat["categorical"] and feat["threshold"]]
+
 
 def cast_features(df_final: pd.DataFrame, features: List[Feature]) -> pd.DataFrame:
     """

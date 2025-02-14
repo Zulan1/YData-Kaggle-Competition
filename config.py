@@ -1,6 +1,6 @@
 USE_CATBOOST = True
 IMPUTATION_STATEGY = 'most_frequent'
-RANDOM_STATE = 50
+RANDOM_STATE = 42
 
 LEAVE_ONE_PRODUCT_OUT = True
 
@@ -11,12 +11,11 @@ CAT_FEATURES = ['product', 'campaign_id', 'webpage_id', 'product_category', 'use
 DEFAULT_MODEL_PARAMS = {
     "iterations": 1500,  # Number of boosting rounds
     "learning_rate": 0.05,  # Lower = better generalization
-    "depth": 6,  # Balanced depth to prevent overfitting
-    "l2_leaf_reg": 5,  # Regularization to control complexity
+    "depth": 7,  # Balanced depth to prevent overfitting
+    "l2_leaf_reg": 10,  # Regularization to control complexity
     "loss_function": "Logloss",  # Best for CTR probability modeling
     "eval_metric": "AUC",  # Optimized for ranking CTR probabilities
     "cat_features": CAT_FEATURES,  # 🚀 No encoding needed!
-    "scale_pos_weight": 13.8,  # 7% CTR
     "bagging_temperature": 1,  # Adds randomness for generalization
     "random_strength": 2,  # Adds noise to prevent overfitting
     "boosting_type": "Ordered",  # "Plain" is faster, "Ordered" is better for small datasets
