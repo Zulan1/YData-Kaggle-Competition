@@ -2,18 +2,28 @@ import constants as cons
 from invoke import task
 from app.time_utils import get_timestamp_str
 from experiments import Experiment
+import os
 
 DEFAULT_CSV_FOR_TRAINING = f"{Experiment.DATA_PATH}/{Experiment.DEFAULT_INPUT_CSV_FOR_TRAINING}"
 DEFAULT_CSV_FOR_PREDICTION = f"{Experiment.DATA_PATH}/{Experiment.DEFAULT_INPUT_CSV_FOR_PREDICTION}"
 
-pty_arg = False
+# Determine if the current OS is Windows, if not, do not use pty since it is not supported in Windows 
+if os.name == 'nt':
+        pty_arg = False
+else:
+    pty_arg = True
+
+    
 
 @task
 def pipeline(
     c,
-    csv_for_training=DEFAULT_CSV_FOR_TRAINING, 
-    n_trials=50, 
+    csv_for_training=DEFAULT_CSV_FOR_TRAINING,
+    limit_data=False,
+    model="default",
+    n_trials=100, 
     gpu=False, 
+    metric=None,
     run_id=None):
 
     """Run full training pipeline:
@@ -23,19 +33,22 @@ def pipeline(
     4. Generate predictions
     5. Analyze results
     """
-
     experiment = Experiment.new(csv_for_training, verbose=True)
+
+    limit_data_cmd = "--limit-data" if limit_data else ""
+
 
     c.run(
         "python preprocess.py "
         "--mode=train "
         f"--csv-for-preprocessing={experiment.input_csv_for_training} "
         f"--output-path={experiment.preprocess_path} "
+        f"{limit_data_cmd} "
         "--verbose",
         hide=False,
         pty=pty_arg
     )
-    
+
     # c.run(
     #     f"python train.py --optuna-search "
     #     f"--input-path={experiment.preprocess_path} "
@@ -45,14 +58,14 @@ def pipeline(
     #     )
     
     c.run(
-        "python train.py "
-        "--use-default-model "
+        f"python train.py --use-default-model "
         f"--input-path={experiment.preprocess_path} "
-        f"--output-path={experiment.train_path} ",
+        f"--output-path={experiment.train_path} "
+        f"--metric={metric} "
+        "--verbose",
         hide=False,
         pty=pty_arg
     )
-    
     c.run(
         f"python predict.py "
         f"--model-path={experiment.model_path} "
@@ -78,51 +91,14 @@ def pipeline(
     
     experiment.finish()
 
-
-@task
-def debug_pipeline(c):
-    """Run full training pipeline:
-    1. Preprocess training data
-    2. Train model with RandomForest defaults
-    3. Preprocess holdout data
-    4. Generate predictions
-    5. Analyze results
-    """
-    
-    run_id = get_timestamp_str()
+def new_func(c, n_trials, gpu, experiment):
     c.run(
-        "python preprocess.py "
-        "--mode=train "
-        f"--output-path=./data/preprocess_{run_id} "
-        f"--input-path=./data/{cons.DEFAULT_INTERNAL_DATA_FILE} "
-        "--verbose"
-        )
-
-    c.run(
-        "python train.py "
-        "--use-default-model "
-        f"--input-path=./data/preprocess_{run_id}/ "
-        f"--output-path=./data/train_{run_id}/ "
-    )
-
-    c.run(
-        f"python predict.py "
-        f"--model-path=./data/train_{run_id}/{cons.DEFAULT_MODEL_FILE} "
-        f"--transformer-path=./data/preprocess_{run_id}/{cons.DEFAULT_TRANSFORMER_FILE} "
-        f"--input-path=./data/preprocess_{run_id}/ "
-        f"--output-path=./data/predictions_{run_id}/ "
-        "--verbose"
-        )
-    
-    c.run(f"python result.py --output-path=./data/ "
-          f"--predictions-path=./data/predictions_{run_id}/{cons.DEFAULT_PREDICTIONS_FILE} "
-          f"--labels-path=./data/preprocess_{run_id}/{cons.DEFAULT_TEST_LABELS_FILE} "
-          f"--features-path=./data/preprocess_{run_id}/{cons.DEFAULT_TEST_FEATURES_FILE} "
-          f"--predicted-probabilities-path=./data/predictions_{run_id}/{cons.DEFAULT_PREDICTED_PROBABILITIES_FILE} "
-          f"--output-path=./data/result_{run_id}/ "
-          f"--model-path=./data/train_{run_id}/{cons.DEFAULT_MODEL_FILE}"
-          )
-
+         f"python train.py --optuna-search "
+         f"--input-path={experiment.preprocess_path} "
+         f"--n-trials={n_trials} "
+         f"--output-path={experiment.train_path} "
+         f"{'--gpu' if gpu else ''}"
+         )
 
 @task
 def inference_pipeline(c, run_id, csv_for_prediction=DEFAULT_CSV_FOR_PREDICTION):
@@ -151,7 +127,7 @@ def inference_pipeline(c, run_id, csv_for_prediction=DEFAULT_CSV_FOR_PREDICTION)
 
     c.run(
         f"python predict.py "
-        f"--model-path={experiment.model_path} "
+        f"--model-path={experiment.full_model_path} "
         f"--test-features-path={experiment.external_test_features_path} "
         f"--test-dtypes-path={experiment.external_test_dtypes_path} "
         f"--output-path={experiment.predict_path} "

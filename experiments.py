@@ -22,6 +22,10 @@ class Experiment:
     DEFAULT_EXTERNAL_TEST_FEATURES_FILE = 'external_test_features.csv'
     DEFAULT_EXTERNAL_TEST_DTYPES_FILE = 'external_test_dtypes.pkl'
 
+    DEFAULT_FULL_PROCESSED_TRAINING_FILE = 'full_processed_training.csv'
+    DEFAULT_FULL_PROCESSED_TRAINING_DTYPES_FILE = 'full_processed_training_dtypes.pkl'
+
+    DEFAULT_FULL_MODEL_FILE = 'full_model.pkl'
     DEFAULT_PREDICTIONS_FILE = 'predictions.csv'
     DEFAULT_PREDICTED_PROBABILITIES_FILE = 'predicted_probabilities.csv'
 
@@ -54,7 +58,7 @@ class Experiment:
         self.verbose = verbose
         self.run_id = run_id
         if self.verbose:
-            print(f"\nInitializing experiment {self.run_id}...\n")
+            print(f"\n[experiments.py] Initializing experiment {self.run_id}...\n")
 
         self.data_path = self.DATA_PATH
         self.archived_experiments_path = self.ARCHIVED_EXPERIMENTS_PATH
@@ -78,6 +82,7 @@ class Experiment:
         self.labels_path = f"{self.preprocess_path}/{self.DEFAULT_TEST_LABELS_FILE}"
         self.features_path = f"{self.preprocess_path}/{self.DEFAULT_TEST_FEATURES_FILE}"
         self.transformer_path = f"{self.preprocess_path}/{self.DEFAULT_TRANSFORMER_FILE}"
+        self.full_model_path = f"{self.train_path}/{self.DEFAULT_FULL_MODEL_FILE}"
 
     def _init_new_experiment(self):
         self.clear_data_path(self.data_path)
@@ -119,6 +124,6 @@ class Experiment:
         shutil.copytree(self.experiment_path, f"{self.archived_experiments_path}/{self.experiment_name}")
 
         if self.verbose:
-            print(f"\nExperiment {self.run_id} finished and archived at {self.archived_experiments_path}/{self.experiment_name}")
+            print(f"\n[experiments.py] Experiment {self.run_id} finished and archived at {self.archived_experiments_path}/{self.experiment_name}")
     
 

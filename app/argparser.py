@@ -1,6 +1,7 @@
 import argparse
 import constants as cons
 
+
 def parse_xgb_params(params):
     keys = ['n_estimators', 'eta', 'max_depth', 'subsample', 'gamma', 'reg_lambda', 'scale_pos_weight']
     if len(params) != len(keys):    
@@ -38,7 +39,8 @@ def get_train_args():
     parser.add_argument('--model-type', type=str, default=None, help='The type of model to train, or to search on if optuna_search is enabled')
     parser.add_argument('--output-path', type=str, default='models', help='Path to the trained model')
     parser.add_argument('--gpu', action='store_true', help='Use GPU for training')
-
+    parser.add_argument('--verbose', action='store_true', help='Print additional information')
+    parser.add_argument('--metric', type=str, help='Metric to use for evaluation, see catboost documentation.')
     parser.add_argument('--xgb-params', type=parse_xgb_params, default=None,
                         help='XGBoost hyperparameters, required if model-type is XGBoost\n'
                         'Expected keys:\n'
@@ -98,6 +100,7 @@ def get_preprocessing_args():
     parser.add_argument('--verbose', action='store_true', help='Print additional information')
     parser.add_argument('--mode', type=str, default='train', help='Mode: train, test')
     parser.add_argument('--transformer-path', type=str, default=None,help='Path to transformer file')
+    parser.add_argument('--limit-data', action='store_true', help='Limit data to 1500 rows for testing')
     return parser.parse_args()
 
 def get_predict_args():
