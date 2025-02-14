@@ -33,6 +33,7 @@ class Experiment:
 
     DEFAULT_TRANSFORMER_FILE = 'transformer.pkl'
     DEFAULT_MODEL_FILE = 'model.pkl'
+    DEFAULT_PREDICTED_LABELS_FILE = 'predicted_labels.csv'
 
     @classmethod
     def new(cls, csv_for_training, verbose=False):
@@ -83,6 +84,7 @@ class Experiment:
         self.features_path = f"{self.preprocess_path}/{self.DEFAULT_TEST_FEATURES_FILE}"
         self.transformer_path = f"{self.preprocess_path}/{self.DEFAULT_TRANSFORMER_FILE}"
         self.full_model_path = f"{self.train_path}/{self.DEFAULT_FULL_MODEL_FILE}"
+        self.predicted_labels_path = f"{self.predict_path}/{self.DEFAULT_PREDICTED_LABELS_FILE}"
 
     def _init_new_experiment(self):
         self.clear_data_path(self.data_path)
