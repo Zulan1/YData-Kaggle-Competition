@@ -3,6 +3,7 @@ from app.file_manager import (
     save_data_for_test,
     save_data_for_training, save_data_for_validation, get_data, save_transformer, get_transformer, save_data_for_external_test, save_full_processed_training
 )
+import constants as cons
 import pandas as pd
 from transformer import DataTransformer
 from splitting import DataSplitter

@@ -24,7 +24,6 @@ DEFAULT_RESULTS_FILE = 'results.csv'
 DEFAULT_TRANSFORMER_FILE = 'transformer.pkl'
 DEFAULT_MODEL_FILE = 'model.pkl'
 DEFAULT_FULL_MODEL_FILE = 'full_model.pkl'
-DEFAULT_PREDICTED_LABELS_FILE = 'predicted_labels.csv'
 
 
 COLUMNS_TO_DROP = ['product_category_2', 'city_development_index']

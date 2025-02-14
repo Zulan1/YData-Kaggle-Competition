@@ -168,14 +168,14 @@ def distinct_webpages_count_func(df: pd.DataFrame) -> pd.Series:
     return series
 
 # U4c. most_common_time_of_day
-# def most_common_time_of_day_func(df: pd.DataFrame) -> pd.Series:
-#     session_time = session_time_of_day_func(df)
-#     if session_time.isnull().any():
-#         raise ValueError("NaN detected in session_time_of_day; input must not contain NaN values.")
-#     user_mode = session_time.groupby(df["user_id"]).agg(lambda x: x.mode().iloc[0])
-#     result = df["user_id"].map(user_mode)
-#     result.name = "most_common_time_of_day"
-#     return result.astype("string")
+def most_common_time_of_day_func(df: pd.DataFrame) -> pd.Series:
+    session_time = session_time_of_day_func(df)
+    if session_time.isnull().any():
+        raise ValueError("NaN detected in session_time_of_day; input must not contain NaN values.")
+    user_mode = session_time.groupby(df["user_id"]).agg(lambda x: x.mode().iloc[0])
+    result = df["user_id"].map(user_mode)
+    result.name = "most_common_time_of_day"
+    return result.astype("string")
 
 # U5. total_active_days
 def total_active_days_func(df: pd.DataFrame) -> pd.Series:
@@ -415,12 +415,6 @@ def session_mixed_secondary_product_category_known_func(df: pd.DataFrame) -> pd.
     series.name = "session_mixed_secondary_product_category_known"
     return series.astype(int)
 
-def session_day_of_week_func(df: pd.DataFrame) -> pd.Series:
-    # Compute the day of the week from the session_date column directly.
-    series = df["DateTime"].dt.dayofweek
-    series.name = "session_day_of_week"
-    return series.astype(int)
-
 def session_mixed_city_development_index_known_func(df: pd.DataFrame) -> pd.Series:
     """
     For each session, checks if there exists another session with the same user_id and DateTime
@@ -468,8 +462,6 @@ def user_uniform_var1_func(df: pd.DataFrame) -> pd.Series:
     result.name = "user_uniform_var1"
     return result.astype(int)
 
-
-
 # -----------------------------------------------------------------------------
 # Definition of the final feature list including function pointers.
 # -----------------------------------------------------------------------------
@@ -484,8 +476,8 @@ FEATURES_LIST = [
     {"name": "var_1", "scope": "session", "categorical": False, "func": make_original_feature_func("var_1"), "threshold": False},
     {"name": "user_depth", "scope": "user", "categorical": True, "func": make_original_feature_func("user_depth"), "threshold": False},
     {"name": "age_level", "scope": "user", "categorical": False, "func": make_original_feature_func("age_level"), "threshold": True},
-    {"name": "secondary_product_category_known", "scope": "session", "categorical": True, "func": make_original_feature_func("secondary_product_category_known"), "threshold": False},
-    {"name": "city_development_index_known", "scope": "session", "categorical": True, "func": make_original_feature_func("city_development_index_known"), "threshold": False},
+    {"name": "secondary_product_category_known", "scope": "session", "categorical": False, "func": make_original_feature_func("secondary_product_category_known"), "threshold": False},
+    {"name": "city_development_index_known", "scope": "session", "categorical": False, "func": make_original_feature_func("city_development_index_known"), "threshold": False},
     
     # --- Engineered Session-level Features ---
     {"name": "daily_sessions_count", "scope": "session", "categorical": False, "func": daily_sessions_count_func, "threshold": True},
@@ -507,7 +499,7 @@ FEATURES_LIST = [
     {"name": "distinct_categories_count", "scope": "user", "categorical": False, "func": distinct_categories_count_func, "threshold": True},
     {"name": "distinct_campaigns_count", "scope": "user", "categorical": False, "func": distinct_campaigns_count_func, "threshold": True},
     {"name": "distinct_webpages_count", "scope": "user", "categorical": False, "func": distinct_webpages_count_func, "threshold": True},
-    {"name": "session_day_of_week", "scope": "session", "categorical": True, "func": session_day_of_week_func, "threshold": False},
+    {"name": "most_common_time_of_day", "scope": "user", "categorical": True, "func": most_common_time_of_day_func, "threshold": False},
     {"name": "total_active_days", "scope": "user", "categorical": False, "func": total_active_days_func, "threshold": False},
     {"name": "sessions_with_min_gap_count", "scope": "user", "categorical": False, "func": sessions_with_min_gap_count_func, "threshold": True},
     {"name": "excess_duplicate_timestamps", "scope": "user", "categorical": False, "func": excess_duplicate_timestamps_func, "threshold": True},
@@ -522,7 +514,6 @@ FEATURES_LIST = [
     {"name": "mixed_city_development_index_known", "scope": "user", "categorical": False, "func": mixed_city_development_index_known_func, "threshold": True},
     {"name": "mixed_product_category_2_known", "scope": "user", "categorical": False, "func": mixed_product_category_2_known_func, "threshold": True},
     {"name": "user_uniform_var1", "scope": "user", "categorical": False, "func": user_uniform_var1_func, "threshold": True},
-    {"name": "session_day_of_week", "scope": "session", "categorical": True, "func": session_day_of_week_func, "threshold": True}
 ]
 
 NUMERICAL_THRESHOLD_FEATURES = [feat["name"] for feat in FEATURES_LIST if feat["threshold"] and not feat["categorical"]]

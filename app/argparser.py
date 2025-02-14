@@ -113,8 +113,8 @@ def get_predict_args():
 
 def get_result_args():
     parser = argparse.ArgumentParser(description='Analyze results')
-    parser.add_argument('--predicted-labels-path', type=str, required=True, help="Path to predicted labels file")
     parser.add_argument('--predictions-path', type=str, required=True, help="Path to predictions file")
+    parser.add_argument('--predicted-probabilities-path', type=str, required=True, help="Path to predicted probabilities file")
     parser.add_argument('--labels-path', type=str, required=True, help="Path to labels file")
     parser.add_argument('--features-path', type=str, required=True, help='Path to features file')
     parser.add_argument('--output-path', type=str, required=True, help='Path to results file')

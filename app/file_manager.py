@@ -107,12 +107,12 @@ def save_predictions(df, output_path, verbose):
         log(f"[file_manager.py] Predictions saved to {predictions_path} (header excluded)", verbose)
     return
 
-def save_predicted_labels(df, output_path, verbose):
-    labels_path = os.path.join(output_path, cons.DEFAULT_PREDICTED_LABELS_FILE)
-    """Save predicted labels to a CSV file."""
-    df.to_csv(labels_path, index=False, header=False)
+def save_predicted_probabilities(df, output_path, verbose):
+    probabilities_path = os.path.join(output_path, cons.DEFAULT_PREDICTED_PROBABILITIES_FILE)
+    """Save predicted probabilities to a CSV file."""
+    df.to_csv(probabilities_path, index=False)
     if verbose:
-        log(f"[file_manager.py] Predicted labels saved to {labels_path} (header excluded)", verbose)
+        log(f"[file_manager.py] Predicted probabilities saved to {probabilities_path}", verbose)
     return
 
 def get_model(model_path: str, verbose: bool) -> Any:
