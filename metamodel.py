@@ -41,20 +41,16 @@ class MetaModel:
     def fit(self, X_train, y_train):
         # Train base model
         self.base_model.fit(X_train, y_train)
-        print("Base model trained")
         self.meta_data_transformer.fit(X_train)
-        print("Meta data transformer fitted")
         
         # Get predicted probabilities
         y_pred_prob_train = self.base_model.predict_proba(X_train)[:, 1]
         
         # Prepare meta features (predicted probabilities + session/user-level features)
         X_meta_train = self.meta_data_transformer.transform(X_train, y_pred_prob_train)
-        print("Meta features transformed", X_meta_train.columns)
         
         # Train meta-model
         self.meta_model.fit(X_meta_train, y_train)
-        print("Meta model trained")
     def predict(self, X):
         # Get predicted probabilities from base model
         y_pred_prob = self.base_model.predict_proba(X)[:, 1]

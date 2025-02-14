@@ -313,12 +313,12 @@ def main():
     
     print(f"[train.py] Training model on full training set for future inference")
 
-    # df_full = load_full_processed_training(args.input_path)
-    # X_full, y_full = split_dataset_Xy(df_full)
-    # model.fit(X_full, y_full)
-    # save_full_model(model, args.output_path)
-    # if args.verbose:
-    #     print(f"[train.py] Full model saved to {args.output_path}.")
+    df_full = load_full_processed_training(args.input_path)
+    X_full, y_full = split_dataset_Xy(df_full)
+    model.fit(X_full, y_full)
+    save_full_model(model, args.output_path)
+    if args.verbose:
+        print(f"[train.py] Full model saved to {args.output_path}.")
 
 if __name__ == "__main__":
     main()
